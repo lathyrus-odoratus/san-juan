@@ -1,0 +1,1075 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>San Juan Online — 互動線稿圖</title>
+<style>
+:root {
+  --green-dark: #1a472a;
+  --green-mid: #2d5a3d;
+  --gold: #c9a227;
+  --gold-light: #e8c44a;
+  --cream: #f5f0e8;
+  --card-bg: #faf7f2;
+  --border: #9aa0a6;
+  --modal-bg: rgba(0,0,0,0.65);
+  --drawer-w: 280px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: system-ui, sans-serif; background: #111; color: #333; min-height: 100vh; }
+
+/* ── Nav ── */
+.demo-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9000;
+  background: #1a1a2e; border-bottom: 2px solid var(--gold);
+  padding: 6px 14px; display: flex; align-items: center; gap: 10px;
+}
+.demo-nav span { color: var(--gold); font-size: 12px; font-weight: bold; margin-right: 6px; }
+.demo-nav button {
+  padding: 4px 12px; border: 1px solid #444; background: #2d2d4e;
+  color: #ccc; border-radius: 4px; cursor: pointer; font-size: 12px;
+}
+.demo-nav button.active, .demo-nav button:hover { background: var(--gold); color: #111; border-color: var(--gold); }
+
+/* ── Screen System ── */
+.screen { display: none; padding-top: 38px; }
+.screen.active { display: block; }
+
+/* ── Shared Buttons ── */
+.btn-primary { padding: 9px 22px; background: var(--gold); color: #111; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: bold; }
+.btn-primary:hover { background: var(--gold-light); }
+.btn-secondary { padding: 9px 22px; background: transparent; color: var(--cream); border: 1px solid #666; border-radius: 6px; cursor: pointer; font-size: 13px; }
+.btn-secondary:hover { border-color: var(--gold); color: var(--gold); }
+.btn-ghost { padding: 7px 18px; border: 1px solid #555; background: transparent; color: #aaa; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.btn-confirm { padding: 7px 22px; background: var(--gold); color: #111; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; }
+.btn-confirm:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn-danger { padding: 7px 18px; border: 1px solid #c0392b; background: transparent; color: #e74c3c; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.btn-close { background: none; border: none; color: #aaa; cursor: pointer; font-size: 18px; line-height: 1; }
+
+/* ════════════════════════════
+   LOBBY SCREEN
+════════════════════════════ */
+.lobby-screen { min-height: 100vh; background: var(--green-dark); }
+.lobby-header {
+  background: var(--green-mid); padding: 11px 22px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--gold);
+}
+.lobby-title { color: var(--gold); font-size: 19px; font-weight: bold; }
+.user-badge { display: flex; align-items: center; gap: 8px; color: var(--cream); font-size: 13px; }
+.user-avatar { width: 30px; height: 30px; border-radius: 50%; background: #7289da; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 13px; }
+.lobby-body { max-width: 820px; margin: 0 auto; padding: 22px; }
+.lobby-actions { display: flex; gap: 10px; margin-bottom: 22px; }
+.section-title { color: #aaa; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px; }
+.room-list { display: flex; flex-direction: column; gap: 8px; }
+.room-card {
+  background: var(--green-mid); border: 1px solid #3d5a3d; border-radius: 8px;
+  padding: 14px 16px; display: flex; align-items: center; justify-content: space-between;
+  cursor: pointer; transition: border-color 0.2s;
+}
+.room-card:hover { border-color: var(--gold); }
+.room-info h3 { color: var(--cream); font-size: 14px; }
+.room-meta { display: flex; gap: 14px; margin-top: 3px; }
+.room-meta span { color: #999; font-size: 11px; }
+.room-status { padding: 3px 9px; border-radius: 4px; font-size: 11px; font-weight: bold; }
+.status-waiting { background: #1d4d1d; color: #6bcf6b; }
+.status-full { background: #4d1d1d; color: #cf6b6b; }
+
+/* ════════════════════════════
+   ROOM SCREEN
+════════════════════════════ */
+.room-screen { min-height: 100vh; background: var(--green-dark); }
+.room-header {
+  background: var(--green-mid); padding: 11px 22px;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--gold);
+}
+.room-body { max-width: 820px; margin: 0 auto; padding: 22px; display: grid; grid-template-columns: 1fr 280px; gap: 22px; }
+.player-slots { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+.player-slot {
+  background: var(--green-mid); border: 2px dashed #3d5a3d; border-radius: 8px;
+  padding: 14px; display: flex; align-items: center; gap: 10px; min-height: 76px;
+}
+.player-slot.filled { border-style: solid; border-color: #3d7a52; }
+.player-slot.is-host { border-color: var(--gold); }
+.slot-avatar { width: 42px; height: 42px; border-radius: 50%; background: #7289da; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 17px; flex-shrink: 0; }
+.slot-info h4 { color: var(--cream); font-size: 13px; }
+.host-badge { padding: 1px 5px; background: #5a4a00; color: var(--gold); border-radius: 3px; font-size: 9px; margin-left: 3px; }
+.ready-badge { display: inline-block; padding: 2px 7px; background: #1d4d1d; color: #6bcf6b; border-radius: 4px; font-size: 11px; margin-top: 2px; }
+.slot-empty { color: #555; font-size: 12px; }
+.room-controls { display: flex; gap: 10px; }
+.chat-panel { background: var(--green-mid); border: 1px solid #3d5a3d; border-radius: 8px; display: flex; flex-direction: column; height: 380px; }
+.chat-header { padding: 9px 12px; border-bottom: 1px solid #3d5a3d; color: var(--cream); font-size: 12px; font-weight: bold; }
+.chat-messages { flex: 1; padding: 10px 12px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+.chat-msg .name { color: var(--gold); font-size: 12px; font-weight: bold; }
+.chat-msg .text { color: #ccc; font-size: 12px; }
+.chat-input-row { padding: 7px; border-top: 1px solid #3d5a3d; display: flex; gap: 5px; }
+.chat-input { flex: 1; background: #1a1a1a; border: 1px solid #555; color: var(--cream); border-radius: 4px; padding: 5px 9px; font-size: 12px; }
+.btn-send { padding: 5px 10px; background: var(--gold); color: #111; border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+/* ════════════════════════════
+   GAME BOARD
+════════════════════════════ */
+.game-screen { height: 100vh; background: var(--green-dark); overflow: hidden; }
+.game-board {
+  height: calc(100vh - 38px);
+  display: grid;
+  grid-template-columns: 220px 1fr 220px;
+  grid-template-rows: 96px 1fr 152px 32px;
+  gap: 7px; padding: 7px;
+}
+.player-area {
+  background: rgba(0,0,0,0.22); border: 1px solid #3d5a3d;
+  border-radius: 8px; padding: 9px; position: relative; overflow: hidden;
+}
+.player-top    { grid-column: 1 / 4; grid-row: 1; }
+.player-left   { grid-column: 1;     grid-row: 2; }
+.player-right  { grid-column: 3;     grid-row: 2; }
+.player-bottom { grid-column: 2 / 4; grid-row: 3; }
+.center-area   { grid-column: 2;     grid-row: 2; background: rgba(0,0,0,0.18); border: 1px solid #3d5a3d; border-radius: 8px; padding: 11px; display: flex; flex-direction: column; align-items: center; gap: 9px; }
+.info-panel    { grid-column: 1;     grid-row: 3; background: rgba(0,0,0,0.28); border: 1px solid #3d5a3d; border-radius: 8px; padding: 9px; overflow-y: auto; }
+.game-footer   { grid-column: 1 / 4; grid-row: 4; display: flex; align-items: center; justify-content: center; color: #555; font-size: 11px; }
+
+/* Player avatar / info */
+.player-avatar-row { display: flex; align-items: center; gap: 8px; }
+.p-avatar {
+  width: 34px; height: 34px; border-radius: 50%; background: #7289da;
+  display: flex; align-items: center; justify-content: center;
+  color: #fff; font-size: 14px; cursor: pointer; position: relative; flex-shrink: 0;
+}
+.p-avatar.governor::after { content: '👑'; position: absolute; top: -9px; left: 50%; transform: translateX(-50%); font-size: 11px; }
+.p-avatar.is-active { box-shadow: 0 0 0 3px var(--gold); animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 3px var(--gold); } 50% { box-shadow: 0 0 0 7px rgba(201,162,39,.3); } }
+.p-name  { color: var(--cream); font-size: 11px; font-weight: bold; }
+.p-stats { color: #999; font-size: 10px; }
+
+/* Hover popup */
+.player-info-popup {
+  display: none; position: absolute; background: rgba(10,20,10,0.95);
+  border: 1px solid var(--gold); border-radius: 6px; padding: 9px;
+  z-index: 100; min-width: 150px; pointer-events: none; font-size: 11px;
+}
+.player-area:hover .player-info-popup { display: block; }
+.popup-row { display: flex; justify-content: space-between; gap: 14px; padding: 1px 0; }
+.popup-label { color: #999; }
+.popup-value { color: var(--cream); font-weight: bold; }
+.popup-goods { margin-top: 5px; }
+.goods-item { display: flex; justify-content: space-between; font-size: 10px; color: #ccc; padding: 1px 0; }
+
+/* Fan cards */
+.fan-cards { display: flex; align-items: flex-end; gap: 2px; margin-top: 4px; }
+.fan-card { width: 14px; height: 22px; background: #4a6fa5; border: 1px solid #6a8fc5; border-radius: 2px; }
+.fan-cards.few    .fan-card:nth-child(n+3) { display: none; }
+.fan-cards.medium .fan-card:nth-child(n+6) { display: none; }
+
+/* Mini buildings */
+.buildings-row { display: flex; gap: 3px; flex-wrap: wrap; margin-top: 5px; }
+.mini-building {
+  width: 26px; height: 34px; background: var(--card-bg); border: 1px solid #ccc;
+  border-radius: 3px; display: flex; align-items: center; justify-content: center;
+  font-size: 8px; color: #555; cursor: pointer; position: relative;
+}
+.mini-building.has-goods::after { content: '●'; position: absolute; top: -4px; right: -3px; color: var(--gold); font-size: 9px; }
+
+/* Self hand cards */
+.hand-cards { display: flex; gap: 5px; flex-wrap: wrap; margin-top: 5px; }
+.hand-card {
+  width: 48px; height: 66px; background: var(--card-bg); border: 1px solid #ccc;
+  border-radius: 4px; cursor: pointer; transition: transform 0.12s, box-shadow 0.12s;
+  display: flex; flex-direction: column; padding: 4px; font-size: 8px; color: #333; position: relative;
+}
+.hand-card:hover { transform: translateY(-8px); box-shadow: 0 8px 16px rgba(0,0,0,.4); }
+.hand-card.selected { transform: translateY(-12px); box-shadow: 0 0 0 2px var(--gold), 0 8px 16px rgba(0,0,0,.4); }
+.card-name { font-weight: bold; font-size: 8px; }
+.card-cost { position: absolute; top: 3px; right: 3px; color: #999; }
+.card-vp   { position: absolute; bottom: 3px; right: 3px; color: var(--gold); font-weight: bold; }
+
+/* Center zones */
+.phase-indicator { background: rgba(201,162,39,.12); border: 1px solid var(--gold); border-radius: 6px; padding: 5px 14px; color: var(--gold); font-size: 12px; font-weight: bold; text-align: center; }
+.center-zones { display: flex; gap: 10px; }
+.zone-card { background: rgba(0,0,0,.28); border: 1px solid #4d6a4d; border-radius: 6px; padding: 9px 12px; text-align: center; }
+.zone-label { color: #888; font-size: 9px; }
+.zone-value { color: var(--cream); font-size: 17px; font-weight: bold; }
+.price-card { background: #faf7f2; border-radius: 6px; padding: 7px 10px; display: flex; gap: 9px; }
+.price-item { text-align: center; }
+.price-item .g-name  { color: #666; font-size: 9px; }
+.price-item .g-price { color: var(--gold); font-weight: bold; font-size: 13px; }
+
+/* Info panel */
+.info-panel-title { color: #888; font-size: 9px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 7px; }
+.log-item { color: var(--cream); font-size: 10px; padding: 3px 0; border-bottom: 1px solid #2d3d2d; }
+.log-item:last-child { border: none; }
+.log-hl { color: var(--gold); }
+
+/* Settings drawer */
+.settings-drawer {
+  position: fixed; top: 38px; right: 0; bottom: 0; width: var(--drawer-w);
+  background: #1a2a1a; border-left: 1px solid var(--gold);
+  transform: translateX(100%); transition: transform .28s ease;
+  z-index: 400; padding: 18px; overflow-y: auto;
+}
+.settings-drawer.open { transform: translateX(0); }
+.drawer-title { color: var(--gold); font-size: 15px; font-weight: bold; margin-bottom: 18px; display: flex; justify-content: space-between; align-items: center; }
+.setting-group { margin-bottom: 18px; }
+.setting-label { color: #999; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 7px; }
+.setting-options { display: flex; gap: 5px; }
+.option-btn { flex: 1; padding: 7px; border: 1px solid #444; background: #2a2a2a; color: #ccc; border-radius: 4px; cursor: pointer; font-size: 11px; text-align: center; }
+.option-btn.active { background: var(--gold); color: #111; border-color: var(--gold); }
+.btn-onboarding { width: 100%; padding: 9px; border: 1px solid var(--gold); background: transparent; color: var(--gold); border-radius: 6px; cursor: pointer; font-size: 12px; margin-top: 6px; }
+.btn-onboarding:hover { background: rgba(201,162,39,.1); }
+
+/* Fixed action buttons */
+.btn-settings, .btn-chat-toggle {
+  position: fixed; width: 42px; height: 42px; border-radius: 50%;
+  border: 1px solid var(--border); color: var(--cream); font-size: 15px;
+  cursor: pointer; z-index: 300; backdrop-filter: blur(4px);
+  background: rgba(255,255,255,.1); bottom: 48px;
+}
+.btn-settings { right: 14px; }
+.btn-chat-toggle { right: 64px; }
+.btn-settings:hover, .btn-chat-toggle:hover { background: rgba(255,255,255,.2); }
+
+/* Chat float */
+.chat-float {
+  position: fixed; right: 64px; bottom: 98px; width: 250px; height: 300px;
+  background: rgba(20,40,20,.97); border: 1px solid #3d5a3d; border-radius: 10px;
+  display: none; flex-direction: column; z-index: 300;
+}
+.chat-float.open { display: flex; }
+
+/* Demo triggers */
+.demo-triggers {
+  position: fixed; bottom: 48px; left: 7px; background: rgba(0,0,0,.88);
+  border: 1px solid #444; border-radius: 8px; padding: 7px; z-index: 300; display: none;
+}
+.game-screen .demo-triggers { display: block; }
+.demo-triggers-title { color: #666; font-size: 9px; margin-bottom: 5px; }
+.demo-triggers button {
+  display: block; width: 100%; margin-bottom: 2px; padding: 3px 7px;
+  background: #2a2a2a; border: 1px solid #444; color: #ccc;
+  border-radius: 3px; cursor: pointer; font-size: 10px; text-align: left;
+}
+.demo-triggers button:hover { background: #3a3a3a; }
+
+/* ════════════════════════════
+   MODALS
+════════════════════════════ */
+.modal-overlay {
+  display: none; position: fixed; inset: 0;
+  background: var(--modal-bg); z-index: 500; align-items: center; justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+.modal-box {
+  background: #1a321a; border: 1px solid var(--gold); border-radius: 12px;
+  padding: 22px; width: 500px; max-width: 95vw; max-height: 88vh; overflow-y: auto;
+}
+.modal-title    { color: var(--gold); font-size: 15px; font-weight: bold; margin-bottom: 4px; }
+.modal-subtitle { color: #aaa; font-size: 11px; margin-bottom: 16px; }
+.modal-footer   { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; padding-top: 12px; border-top: 1px solid #3d5a3d; }
+
+/* Role cards */
+.role-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 7px; margin-bottom: 16px; }
+.role-card {
+  background: var(--card-bg); border: 2px solid #ccc; border-radius: 8px;
+  padding: 9px 5px; text-align: center; cursor: pointer; transition: all .12s;
+}
+.role-card:hover:not(.taken) { border-color: var(--gold); transform: translateY(-2px); }
+.role-card.taken { opacity: .5; cursor: not-allowed; }
+.role-card.selected { border-color: var(--gold); background: #fff9e8; }
+.role-icon { font-size: 22px; margin-bottom: 3px; }
+.role-name { font-size: 10px; color: #333; font-weight: bold; }
+.taken-by { font-size: 9px; color: #888; margin-top: 1px; }
+
+/* Card selector */
+.card-selector { display: flex; gap: 7px; overflow-x: auto; padding: 6px 0; margin-bottom: 12px; }
+.sel-card {
+  min-width: 72px; height: 96px; background: var(--card-bg); border: 2px solid #ccc;
+  border-radius: 6px; cursor: pointer; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 6px; font-size: 10px;
+  color: #333; text-align: center; transition: all .12s; flex-shrink: 0;
+}
+.sel-card:hover:not(.disabled) { border-color: var(--gold); }
+.sel-card.selected  { border-color: var(--gold); background: #fff9e8; }
+.sel-card.disabled  { opacity: .4; cursor: not-allowed; }
+.sel-card .sc-icon  { font-size: 18px; margin-bottom: 3px; }
+.sel-card .sc-title { font-weight: bold; font-size: 10px; }
+.sel-card .sc-sub   { color: #888; font-size: 9px; margin-top: 2px; }
+
+/* Building detail card */
+.bld-card {
+  min-width: 86px; background: var(--card-bg); border: 2px solid #ccc; border-radius: 6px;
+  cursor: pointer; padding: 7px; font-size: 9px; color: #333; transition: all .12s; flex-shrink: 0;
+}
+.bld-card:hover:not(.disabled) { border-color: var(--gold); }
+.bld-card.selected { border-color: var(--gold); background: #fff9e8; }
+.bld-card.disabled { opacity: .4; cursor: not-allowed; }
+.bld-name   { font-weight: bold; font-size: 10px; margin-bottom: 2px; }
+.bld-effect { color: #555; font-size: 9px; line-height: 1.3; }
+.bld-meta   { display: flex; justify-content: space-between; margin-top: 4px; }
+.bld-cost   { color: #888; }
+.bld-vp     { color: var(--gold); font-weight: bold; }
+
+/* Step indicator */
+.step-indicator { display: flex; gap: 5px; margin-bottom: 14px; }
+.step-dot { width: 7px; height: 7px; border-radius: 50%; background: #444; }
+.step-dot.active { background: var(--gold); }
+.step-dot.done   { background: #3d7a52; }
+
+/* Councillor */
+.councillor-hint { background: rgba(201,162,39,.08); border: 1px solid rgba(201,162,39,.25); border-radius: 4px; padding: 7px 11px; color: #ccc; font-size: 11px; margin-bottom: 11px; }
+
+/* Discard */
+.discard-counter { text-align: center; padding: 11px; background: rgba(0,0,0,.18); border-radius: 6px; margin-bottom: 11px; }
+.discard-num { font-size: 26px; font-weight: bold; color: #e74c3c; }
+.discard-label { color: #999; font-size: 11px; }
+
+/* Confirm result */
+.confirm-result { background: rgba(0,0,0,.18); border-radius: 6px; padding: 14px; text-align: center; margin-bottom: 12px; }
+.confirm-icon { font-size: 34px; margin-bottom: 6px; }
+.confirm-text { color: var(--cream); font-size: 13px; }
+
+/* Price bar */
+.price-bar { background: #faf7f2; border-radius: 6px; padding: 6px 10px; display: flex; gap: 8px; margin-bottom: 10px; }
+.price-bar .g-name  { color: #666; font-size: 9px; }
+.price-bar .g-price { color: var(--gold); font-weight: bold; font-size: 13px; }
+.price-bar .g-item  { text-align: center; }
+
+/* Reconnect */
+.reconnect-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.88); z-index: 600; align-items: center; justify-content: center; }
+.reconnect-overlay.open { display: flex; }
+.reconnect-box { background: #1e1e2e; border: 1px solid #555; border-radius: 12px; padding: 30px; text-align: center; width: 300px; }
+.reconnect-icon  { font-size: 38px; margin-bottom: 10px; display: block; animation: spin 2s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.reconnect-title { color: var(--cream); font-size: 17px; font-weight: bold; margin-bottom: 6px; }
+.reconnect-sub   { color: #888; font-size: 12px; margin-bottom: 18px; }
+.reconnect-btns  { display: flex; gap: 8px; justify-content: center; }
+
+/* Onboarding */
+.ob-overlay { display: none; position: fixed; inset: 0; z-index: 700; pointer-events: none; }
+.ob-overlay.open { display: block; }
+.ob-dim { position: absolute; inset: 0; background: rgba(0,0,0,.72); pointer-events: all; }
+.ob-highlight { position: absolute; border: 3px solid var(--gold); border-radius: 8px; box-shadow: 0 0 0 9999px rgba(0,0,0,.72); transition: all .35s ease; pointer-events: none; }
+.ob-tooltip {
+  position: absolute; background: #1a2a1a; border: 1px solid var(--gold);
+  border-radius: 8px; padding: 13px 15px; width: 230px; pointer-events: all;
+}
+.ob-title { color: var(--gold); font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+.ob-text  { color: var(--cream); font-size: 11px; line-height: 1.5; margin-bottom: 10px; }
+.ob-nav   { display: flex; align-items: center; justify-content: space-between; }
+.ob-step  { color: #888; font-size: 10px; }
+.ob-btns  { display: flex; gap: 5px; }
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  .game-board {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto 1fr auto auto auto auto;
+    height: auto; overflow-y: auto;
+  }
+  .player-top    { grid-column: 1; grid-row: 1; }
+  .player-left   { grid-column: 1; grid-row: 2; }
+  .center-area   { grid-column: 1; grid-row: 3; }
+  .player-right  { grid-column: 1; grid-row: 4; }
+  .info-panel    { grid-column: 1; grid-row: 5; }
+  .player-bottom { grid-column: 1; grid-row: 6; }
+  .game-footer   { grid-column: 1; grid-row: 7; }
+  .role-grid { grid-template-columns: repeat(3,1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- Nav -->
+<nav class="demo-nav">
+  <span>San Juan Online 線稿圖</span>
+  <button id="nav-lobby" onclick="showScreen('lobby')">大廳</button>
+  <button id="nav-room"  onclick="showScreen('room')">房間</button>
+  <button id="nav-game"  onclick="showScreen('game')">遊戲桌面</button>
+</nav>
+
+<!-- ═══════════════════════════════════════
+     LOBBY
+═══════════════════════════════════════ -->
+<div class="screen lobby-screen" id="screen-lobby">
+  <header class="lobby-header">
+    <div class="lobby-title">⚓ San Juan Online</div>
+    <div class="user-badge">
+      <div class="user-avatar">S</div>
+      <span>Shao</span>
+      <button class="btn-secondary" style="padding:4px 10px;font-size:11px">登出</button>
+    </div>
+  </header>
+  <div class="lobby-body">
+    <div class="lobby-actions">
+      <button class="btn-primary" onclick="showScreen('room')">＋ 建立房間</button>
+      <button class="btn-secondary">輸入房間碼加入</button>
+    </div>
+    <div class="section-title">公開房間</div>
+    <div class="room-list">
+      <div class="room-card" onclick="showScreen('room')">
+        <div class="room-info">
+          <h3>Shao 的房間</h3>
+          <div class="room-meta"><span>👥 3 / 4</span><span>🔓 公開</span></div>
+        </div>
+        <span class="room-status status-waiting">等待中</span>
+      </div>
+      <div class="room-card">
+        <div class="room-info">
+          <h3>快來快來</h3>
+          <div class="room-meta"><span>👥 4 / 4</span><span>🔓 公開</span></div>
+        </div>
+        <span class="room-status status-full">已滿</span>
+      </div>
+      <div class="room-card" onclick="showScreen('room')">
+        <div class="room-info">
+          <h3>聖胡安高手房</h3>
+          <div class="room-meta"><span>👥 1 / 4</span><span>🔓 公開</span></div>
+        </div>
+        <span class="room-status status-waiting">等待中</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     ROOM
+═══════════════════════════════════════ -->
+<div class="screen room-screen" id="screen-room">
+  <header class="room-header">
+    <div>
+      <div style="color:var(--gold);font-weight:bold;font-size:15px">Shao 的房間</div>
+      <div style="color:#aaa;font-size:11px">房間碼：ABC-123</div>
+    </div>
+    <button class="btn-secondary" onclick="showScreen('lobby')">← 離開房間</button>
+  </header>
+  <div class="room-body">
+    <div>
+      <div class="player-slots">
+        <div class="player-slot filled is-host">
+          <div class="slot-avatar">S</div>
+          <div class="slot-info">
+            <h4>Shao <span class="host-badge">房主</span></h4>
+            <span class="ready-badge">✓ 準備</span>
+          </div>
+        </div>
+        <div class="player-slot filled">
+          <div class="slot-avatar">A</div>
+          <div class="slot-info">
+            <h4>Alice</h4>
+            <span style="color:#888;font-size:11px">未準備</span>
+          </div>
+        </div>
+        <div class="player-slot filled">
+          <div class="slot-avatar" style="background:#e67e22">B</div>
+          <div class="slot-info">
+            <h4>Bob</h4>
+            <span class="ready-badge">✓ 準備</span>
+          </div>
+        </div>
+        <div class="player-slot">
+          <div class="slot-empty">等待玩家加入…</div>
+        </div>
+      </div>
+      <div style="margin-bottom:12px;color:#aaa;font-size:12px">
+        📋 分享房間碼：<strong style="color:var(--cream)">ABC-123</strong>
+      </div>
+      <div class="room-controls">
+        <button class="btn-primary" onclick="showScreen('game')">▶ 開始遊戲</button>
+        <button class="btn-secondary">切換準備</button>
+      </div>
+    </div>
+    <div class="chat-panel">
+      <div class="chat-header">💬 聊天室</div>
+      <div class="chat-messages">
+        <div class="chat-msg"><span class="name">Shao：</span><span class="text">大家好！</span></div>
+        <div class="chat-msg"><span class="name">Alice：</span><span class="text">嗨！</span></div>
+        <div class="chat-msg"><span class="name">Bob：</span><span class="text">準備好了</span></div>
+      </div>
+      <div class="chat-input-row">
+        <input class="chat-input" placeholder="輸入訊息…">
+        <button class="btn-send">送出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     GAME BOARD
+═══════════════════════════════════════ -->
+<div class="screen game-screen" id="screen-game">
+  <div class="game-board">
+
+    <!-- Top: Alice -->
+    <div class="player-area player-top">
+      <div class="player-avatar-row">
+        <div class="p-avatar governor" style="background:#9b59b6">A</div>
+        <div>
+          <div class="p-name">Alice <span style="color:#888;font-size:9px">（總督）</span></div>
+          <div class="p-stats">手牌: 5 ｜ 建築: 2 ｜ 分數: 3</div>
+          <div class="fan-cards medium">
+            <div class="fan-card"></div><div class="fan-card"></div><div class="fan-card"></div>
+            <div class="fan-card"></div><div class="fan-card"></div><div class="fan-card"></div>
+            <div class="fan-card"></div><div class="fan-card"></div>
+          </div>
+        </div>
+        <div class="buildings-row" style="margin-left:auto">
+          <div class="mini-building has-goods" title="染坊（有貨物）">染</div>
+          <div class="mini-building" title="圖書館">圖</div>
+        </div>
+      </div>
+      <div class="player-info-popup" style="top:8px;left:210px">
+        <div class="popup-row"><span class="popup-label">手牌</span><span class="popup-value">5</span></div>
+        <div class="popup-row"><span class="popup-label">建築</span><span class="popup-value">2</span></div>
+        <div class="popup-row"><span class="popup-label">分數</span><span class="popup-value">3</span></div>
+        <div class="popup-goods">
+          <div style="color:#888;font-size:9px;margin-bottom:2px">工廠貨物</div>
+          <div class="goods-item"><span>染坊（Indigo Plant）</span><span style="color:var(--gold)">●</span></div>
+          <div class="goods-item"><span>（無其他工廠）</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Left: Bob -->
+    <div class="player-area player-left">
+      <div class="p-avatar is-active" style="background:#e67e22;margin-bottom:7px">B</div>
+      <div class="p-name">Bob</div>
+      <div class="p-stats" style="margin-bottom:5px">手牌: 3 ｜ 建築: 1</div>
+      <div class="fan-cards few">
+        <div class="fan-card"></div><div class="fan-card"></div><div class="fan-card"></div>
+        <div class="fan-card"></div><div class="fan-card"></div><div class="fan-card"></div>
+        <div class="fan-card"></div><div class="fan-card"></div>
+      </div>
+      <div class="buildings-row" style="margin-top:7px">
+        <div class="mini-building" title="教堂">教</div>
+      </div>
+      <div class="player-info-popup" style="top:0;left:52px">
+        <div class="popup-row"><span class="popup-label">手牌</span><span class="popup-value">3</span></div>
+        <div class="popup-row"><span class="popup-label">建築</span><span class="popup-value">1</span></div>
+        <div class="popup-row"><span class="popup-label">分數</span><span class="popup-value">2</span></div>
+        <div class="popup-goods">
+          <div style="color:#888;font-size:9px;margin-bottom:2px">工廠貨物</div>
+          <div class="goods-item"><span>（無工廠建築）</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Center -->
+    <div class="center-area">
+      <div class="phase-indicator">🏗 建築師階段 — Bob 行動中</div>
+      <div class="center-zones">
+        <div class="zone-card"><div class="zone-label">牌堆</div><div class="zone-value">52</div></div>
+        <div class="zone-card"><div class="zone-label">棄牌</div><div class="zone-value">8</div></div>
+        <div class="zone-card"><div class="zone-label">回合</div><div class="zone-value">3</div></div>
+      </div>
+      <div class="price-card">
+        <div class="price-item"><div class="g-name">靛藍</div><div class="g-price">1</div></div>
+        <div class="price-item"><div class="g-name">糖</div><div class="g-price">2</div></div>
+        <div class="price-item"><div class="g-name">菸草</div><div class="g-price">3</div></div>
+        <div class="price-item"><div class="g-name">可可</div><div class="g-price">4</div></div>
+        <div class="price-item"><div class="g-name">咖啡</div><div class="g-price">5</div></div>
+      </div>
+    </div>
+
+    <!-- Right: Carol -->
+    <div class="player-area player-right">
+      <div class="p-avatar" style="background:#27ae60;margin-bottom:7px">C</div>
+      <div class="p-name">Carol</div>
+      <div class="p-stats" style="margin-bottom:5px">手牌: 7 ｜ 建築: 3</div>
+      <div class="fan-cards many">
+        <div class="fan-card"></div><div class="fan-card"></div><div class="fan-card"></div>
+        <div class="fan-card"></div><div class="fan-card"></div><div class="fan-card"></div>
+        <div class="fan-card"></div><div class="fan-card"></div>
+      </div>
+      <div class="buildings-row" style="margin-top:7px">
+        <div class="mini-building has-goods" title="糖廠（有貨物）">糖</div>
+        <div class="mini-building" title="高塔">塔</div>
+        <div class="mini-building" title="輸水道">水</div>
+      </div>
+    </div>
+
+    <!-- Info Panel -->
+    <div class="info-panel">
+      <div class="info-panel-title">遊戲指引</div>
+      <div class="log-item">回合 3 — <span class="log-hl">建築師</span>階段</div>
+      <div class="log-item"><span class="log-hl">Bob</span> 正在選擇建造</div>
+      <div class="log-item">Carol 建造了 <span class="log-hl">輸水道</span>（花費 3）</div>
+      <div class="log-item">Shao 建造了 <span class="log-hl">高塔</span>（花費 2）</div>
+      <div class="log-item">Bob 選了 <span class="log-hl">礦工</span>，抽得 1 張</div>
+    </div>
+
+    <!-- Bottom: Self -->
+    <div class="player-area player-bottom">
+      <div class="player-avatar-row">
+        <div class="p-avatar" style="background:#e74c3c">S</div>
+        <div>
+          <div class="p-name">Shao（你）</div>
+          <div class="p-stats">建築: 2 ｜ 分數: 5</div>
+          <div style="font-size:10px;color:#aaa;margin-top:2px">
+            染坊：<span style="color:#888">無貨物</span> ｜ 教堂：<span style="color:var(--gold)">存 2</span>
+          </div>
+        </div>
+        <div class="buildings-row" style="margin-left:auto">
+          <div class="mini-building" title="染坊">染</div>
+          <div class="mini-building has-goods" title="教堂（存2）">教</div>
+        </div>
+      </div>
+      <div class="hand-cards">
+        <div class="hand-card"><div class="card-name">染坊</div><div class="card-cost">1</div><div class="card-vp">★1</div></div>
+        <div class="hand-card"><div class="card-name">圖書館</div><div class="card-cost">5</div><div class="card-vp">★3</div></div>
+        <div class="hand-card"><div class="card-name">高塔</div><div class="card-cost">3</div><div class="card-vp">★2</div></div>
+        <div class="hand-card"><div class="card-name">輸水道</div><div class="card-cost">3</div><div class="card-vp">★2</div></div>
+        <div class="hand-card"><div class="card-name">糖廠</div><div class="card-cost">2</div><div class="card-vp">★2</div></div>
+      </div>
+    </div>
+
+    <footer class="game-footer">第 3 回合 ｜ 遊戲時間 12:34</footer>
+  </div>
+
+  <!-- Action buttons -->
+  <button class="btn-settings" onclick="toggleDrawer()" title="設定">i</button>
+  <button class="btn-chat-toggle" onclick="toggleChat()" title="聊天">💬</button>
+
+  <!-- Chat float -->
+  <div class="chat-float" id="chatFloat">
+    <div class="chat-header" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px">
+      <span>💬 聊天室</span>
+      <button class="btn-close" onclick="toggleChat()">✕</button>
+    </div>
+    <div class="chat-messages">
+      <div class="chat-msg"><span class="name">Alice：</span><span class="text">加油！</span></div>
+      <div class="chat-msg"><span class="name">Bob：</span><span class="text">我要建了</span></div>
+    </div>
+    <div class="chat-input-row">
+      <input class="chat-input" placeholder="輸入訊息…">
+      <button class="btn-send">送出</button>
+    </div>
+  </div>
+
+  <!-- Settings Drawer -->
+  <div class="settings-drawer" id="settingsDrawer">
+    <div class="drawer-title">設定 <button class="btn-close" onclick="toggleDrawer()">✕</button></div>
+    <div class="setting-group">
+      <div class="setting-label">玩家資訊顯示</div>
+      <div class="setting-options">
+        <button class="option-btn active" onclick="setOpt(this)">hover</button>
+        <button class="option-btn" onclick="setOpt(this)">always</button>
+      </div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">建築說明模式</div>
+      <div class="setting-options">
+        <button class="option-btn" onclick="setOpt(this)">精簡</button>
+        <button class="option-btn active" onclick="setOpt(this)">詳細</button>
+      </div>
+    </div>
+    <div class="setting-group">
+      <div class="setting-label">導覽</div>
+      <button class="btn-onboarding" onclick="toggleDrawer();startOb()">🧭 再次開啟介面導覽</button>
+    </div>
+  </div>
+
+  <!-- Demo triggers -->
+  <div class="demo-triggers">
+    <div class="demo-triggers-title">▶ 觸發互動 Demo</div>
+    <button onclick="open('roleModal')">職業選擇</button>
+    <button onclick="open('producerModal')">製造商行動</button>
+    <button onclick="open('builderModal')">建築師行動</button>
+    <button onclick="open('traderModal')">貿易商行動 #13</button>
+    <button onclick="open('councillorModal')">議員行動 #14</button>
+    <button onclick="open('discardModal')">手牌超上限 #15</button>
+    <button onclick="open('confirmModal')">通用確認彈窗</button>
+    <button onclick="open('reconnectModal')">斷線重連 #17</button>
+    <button onclick="startOb()">介面導覽</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODALS
+═══════════════════════════════════════ -->
+
+<!-- Role Selection -->
+<div class="modal-overlay" id="roleModal">
+  <div class="modal-box">
+    <div class="modal-title">選擇你的職業</div>
+    <div class="modal-subtitle">你是本回合第一位選擇的玩家（總督特權）</div>
+    <div class="role-grid">
+      <div class="role-card" onclick="selectRole(this)">
+        <div class="role-icon">⛏</div>
+        <div class="role-name">礦工</div>
+        <div class="role-name" style="color:#999;font-weight:normal">Prospector</div>
+      </div>
+      <div class="role-card" onclick="selectRole(this)">
+        <div class="role-icon">🏛</div>
+        <div class="role-name">議員</div>
+        <div class="role-name" style="color:#999;font-weight:normal">Councillor</div>
+      </div>
+      <div class="role-card taken">
+        <div class="role-icon">🛒</div>
+        <div class="role-name">貿易商</div>
+        <div class="taken-by">Alice 已選</div>
+      </div>
+      <div class="role-card" onclick="selectRole(this)">
+        <div class="role-icon">🏗</div>
+        <div class="role-name">建築師</div>
+        <div class="role-name" style="color:#999;font-weight:normal">Builder</div>
+      </div>
+      <div class="role-card" onclick="selectRole(this)">
+        <div class="role-icon">🏭</div>
+        <div class="role-name">製造商</div>
+        <div class="role-name" style="color:#999;font-weight:normal">Producer</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="close('roleModal')">隱藏</button>
+      <button class="btn-confirm" id="roleConfirmBtn" disabled>確定</button>
+    </div>
+  </div>
+</div>
+
+<!-- Producer -->
+<div class="modal-overlay" id="producerModal">
+  <div class="modal-box">
+    <div class="modal-title">製造商：選擇工廠生產貨物</div>
+    <div class="modal-subtitle" style="color:var(--gold)">特權玩家：可生產 2 個貨物</div>
+    <div class="card-selector">
+      <div class="sel-card" onclick="toggleSel(this)">
+        <div class="sc-icon">🏭</div>
+        <div class="sc-title">染坊</div>
+        <div class="sc-sub" style="color:green">空置 ✓</div>
+      </div>
+      <div class="sel-card" onclick="toggleSel(this)">
+        <div class="sc-icon">🍬</div>
+        <div class="sc-title">糖廠</div>
+        <div class="sc-sub" style="color:green">空置 ✓</div>
+      </div>
+      <div class="sel-card disabled">
+        <div class="sc-icon">🚬</div>
+        <div class="sc-title">菸草廠</div>
+        <div class="sc-sub" style="color:#c00">已有貨物</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="close('producerModal')">隱藏</button>
+      <button class="btn-confirm">送出</button>
+    </div>
+  </div>
+</div>
+
+<!-- Builder (2 steps) -->
+<div class="modal-overlay" id="builderModal">
+  <div class="modal-box">
+    <div class="step-indicator">
+      <div class="step-dot active" id="bDot1"></div>
+      <div class="step-dot" id="bDot2"></div>
+    </div>
+    <div id="bStep1">
+      <div class="modal-title">建築師：選擇要建造的建築</div>
+      <div class="modal-subtitle">特權：費用 -1。選擇一張建築卡。</div>
+      <div class="card-selector">
+        <div class="bld-card" onclick="selBld(this)">
+          <div class="bld-name">染坊</div>
+          <div class="bld-effect">生產靛藍貨物的工廠建築。</div>
+          <div class="bld-meta"><span class="bld-cost">費:1</span><span class="bld-vp">★1</span></div>
+        </div>
+        <div class="bld-card" onclick="selBld(this)">
+          <div class="bld-name">圖書館</div>
+          <div class="bld-effect">每次執行特權行動時，可額外執行一次特權。</div>
+          <div class="bld-meta"><span class="bld-cost">費:5</span><span class="bld-vp">★3</span></div>
+        </div>
+        <div class="bld-card" onclick="selBld(this)">
+          <div class="bld-name">高塔</div>
+          <div class="bld-effect">手牌上限提高 4。</div>
+          <div class="bld-meta"><span class="bld-cost">費:3</span><span class="bld-vp">★2</span></div>
+        </div>
+        <div class="bld-card disabled">
+          <div class="bld-name">輸水道</div>
+          <div class="bld-effect">已擁有此建築。</div>
+          <div class="bld-meta"><span class="bld-cost">費:3</span><span class="bld-vp">★2</span></div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger" onclick="close('builderModal')">放棄</button>
+        <button class="btn-ghost" onclick="close('builderModal')">隱藏</button>
+        <button class="btn-confirm" onclick="bNext()">確認</button>
+      </div>
+    </div>
+    <div id="bStep2" style="display:none">
+      <div class="modal-title">建築師：支付 2 張手牌</div>
+      <div class="modal-subtitle">選擇 2 張手牌作為費用（已選 <span id="payCount">0</span> / 2）</div>
+      <div class="card-selector">
+        <div class="sel-card" onclick="togglePay(this)"><div class="sc-icon">🏭</div><div class="sc-title">染坊</div></div>
+        <div class="sel-card" onclick="togglePay(this)"><div class="sc-icon">🏛</div><div class="sc-title">圖書館</div></div>
+        <div class="sel-card" onclick="togglePay(this)"><div class="sc-icon">🗼</div><div class="sc-title">高塔</div></div>
+        <div class="sel-card" onclick="togglePay(this)"><div class="sc-icon">💧</div><div class="sc-title">輸水道</div></div>
+        <div class="sel-card" onclick="togglePay(this)"><div class="sc-icon">🍬</div><div class="sc-title">糖廠</div></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-danger" onclick="close('builderModal')">放棄</button>
+        <button class="btn-ghost" onclick="close('builderModal')">隱藏</button>
+        <button class="btn-confirm" id="payBtn" disabled>確認送出</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Trader (#13) -->
+<div class="modal-overlay" id="traderModal">
+  <div class="modal-box">
+    <div class="modal-title">貿易商：選擇賣出的貨物</div>
+    <div class="modal-subtitle" style="color:var(--gold)">特權：本回合最多賣 2 種貨物</div>
+    <div class="price-bar">
+      <div class="g-item"><div class="g-name">靛藍</div><div class="g-price">1</div></div>
+      <div class="g-item"><div class="g-name">糖</div><div class="g-price">2</div></div>
+      <div class="g-item"><div class="g-name">菸草</div><div class="g-price">3</div></div>
+      <div class="g-item"><div class="g-name">可可</div><div class="g-price">4</div></div>
+      <div class="g-item"><div class="g-name">咖啡</div><div class="g-price">5</div></div>
+    </div>
+    <div class="card-selector">
+      <div class="sel-card" onclick="toggleSel(this)">
+        <div class="sc-icon">🔵</div>
+        <div class="sc-title">靛藍</div>
+        <div class="sc-sub">染坊</div>
+        <div class="sc-sub" style="color:var(--gold)">賣 → 1 手牌</div>
+      </div>
+      <div class="sel-card" onclick="toggleSel(this)">
+        <div class="sc-icon">🍬</div>
+        <div class="sc-title">糖</div>
+        <div class="sc-sub">糖廠</div>
+        <div class="sc-sub" style="color:var(--gold)">賣 → 2 手牌</div>
+      </div>
+      <div class="sel-card disabled">
+        <div class="sc-icon">🚬</div>
+        <div class="sc-title">菸草</div>
+        <div class="sc-sub">菸草廠</div>
+        <div class="sc-sub" style="color:#888">無貨物</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="close('traderModal')">隱藏</button>
+      <button class="btn-confirm">送出</button>
+    </div>
+  </div>
+</div>
+
+<!-- Councillor (#14) -->
+<div class="modal-overlay" id="councillorModal">
+  <div class="modal-box">
+    <div class="modal-title">議員：選擇保留的手牌</div>
+    <div class="councillor-hint">
+      從牌堆抽出 3 張，選擇 1 張加入手牌，其餘棄掉。<br>
+      <span style="color:var(--gold)">特權：多抽 1 張（共 3 選 1）</span>
+    </div>
+    <div class="card-selector">
+      <div class="sel-card" onclick="selOne(this,'councillorModal','cBtn')">
+        <div class="sc-icon">🏭</div><div class="sc-title">染坊</div><div class="sc-sub">費:1 ★1</div>
+      </div>
+      <div class="sel-card" onclick="selOne(this,'councillorModal','cBtn')">
+        <div class="sc-icon">🏛</div><div class="sc-title">圖書館</div><div class="sc-sub">費:5 ★3</div>
+      </div>
+      <div class="sel-card" onclick="selOne(this,'councillorModal','cBtn')">
+        <div class="sc-icon">🗼</div><div class="sc-title">高塔</div><div class="sc-sub">費:3 ★2</div>
+      </div>
+    </div>
+    <div style="color:#888;font-size:10px;margin-bottom:8px">未選的牌將棄掉</div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="close('councillorModal')">隱藏</button>
+      <button class="btn-confirm" id="cBtn" disabled>確認保留</button>
+    </div>
+  </div>
+</div>
+
+<!-- Discard (#15) -->
+<div class="modal-overlay" id="discardModal">
+  <div class="modal-box">
+    <div class="modal-title">手牌超過上限，請棄牌</div>
+    <div class="discard-counter">
+      <div class="discard-num">2</div>
+      <div class="discard-label">張需棄掉（目前 9 張 / 上限 7 張）</div>
+    </div>
+    <div class="modal-subtitle">選擇 2 張要棄掉的手牌</div>
+    <div class="card-selector">
+      <div class="sel-card" onclick="toggleDiscard(this)"><div class="sc-icon">🏭</div><div class="sc-title">染坊</div></div>
+      <div class="sel-card" onclick="toggleDiscard(this)"><div class="sc-icon">🏛</div><div class="sc-title">圖書館</div></div>
+      <div class="sel-card" onclick="toggleDiscard(this)"><div class="sc-icon">🗼</div><div class="sc-title">高塔</div></div>
+      <div class="sel-card" onclick="toggleDiscard(this)"><div class="sc-icon">💧</div><div class="sc-title">輸水道</div></div>
+      <div class="sel-card" onclick="toggleDiscard(this)"><div class="sc-icon">🍬</div><div class="sc-title">糖廠</div></div>
+      <div class="sel-card" onclick="toggleDiscard(this)"><div class="sc-icon">🏗</div><div class="sc-title">製材廠</div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-confirm" id="dBtn" disabled>確認棄牌</button>
+    </div>
+  </div>
+</div>
+
+<!-- Generic Confirm -->
+<div class="modal-overlay" id="confirmModal">
+  <div class="modal-box" style="max-width:340px;text-align:center">
+    <div class="confirm-result">
+      <div class="confirm-icon">⛏</div>
+      <div class="confirm-text">你選擇了礦工，從牌堆獲得 1 張手牌</div>
+    </div>
+    <div class="modal-footer" style="justify-content:center">
+      <button class="btn-confirm" onclick="close('confirmModal')">確認</button>
+    </div>
+  </div>
+</div>
+
+<!-- Reconnect (#17) -->
+<div class="modal-overlay reconnect-overlay" id="reconnectModal">
+  <div class="reconnect-box">
+    <span class="reconnect-icon">🔄</span>
+    <div class="reconnect-title">連線中斷</div>
+    <div class="reconnect-sub">正在嘗試重新連線，請稍候…</div>
+    <div class="reconnect-btns">
+      <button class="btn-primary" onclick="close('reconnectModal')">手動重連</button>
+      <button class="btn-ghost" onclick="close('reconnectModal')">返回大廳</button>
+    </div>
+  </div>
+</div>
+
+<!-- Onboarding -->
+<div class="ob-overlay" id="obOverlay">
+  <div class="ob-dim" onclick="endOb()"></div>
+  <div class="ob-highlight" id="obHL"></div>
+  <div class="ob-tooltip" id="obTip">
+    <div class="ob-title" id="obTitle"></div>
+    <div class="ob-text"  id="obText"></div>
+    <div class="ob-nav">
+      <span class="ob-step" id="obStep"></span>
+      <div class="ob-btns">
+        <button class="btn-ghost" style="padding:3px 9px;font-size:10px" onclick="endOb()">跳過</button>
+        <button class="btn-confirm" style="padding:3px 11px;font-size:10px" id="obNext" onclick="nextOb()">下一步</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Screen ──
+function showScreen(n) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.demo-nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + n).classList.add('active');
+  document.getElementById('nav-' + n).classList.add('active');
+}
+showScreen('lobby');
+
+// ── Modal ──
+function open(id)  { document.getElementById(id).classList.add('open'); }
+function close(id) {
+  document.getElementById(id).classList.remove('open');
+  if (id === 'builderModal') resetBuilder();
+  if (id === 'discardModal') resetDiscard();
+  if (id === 'councillorModal') { document.querySelectorAll('#councillorModal .sel-card').forEach(c=>c.classList.remove('selected')); document.getElementById('cBtn').disabled=true; }
+}
+
+// ── Drawer / Chat ──
+function toggleDrawer() { document.getElementById('settingsDrawer').classList.toggle('open'); }
+function toggleChat()   { document.getElementById('chatFloat').classList.toggle('open'); }
+function setOpt(btn) {
+  btn.closest('.setting-options').querySelectorAll('.option-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// ── Role ──
+function selectRole(card) {
+  if (card.classList.contains('taken')) return;
+  document.querySelectorAll('.role-card:not(.taken)').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+  document.getElementById('roleConfirmBtn').disabled = false;
+}
+
+// ── Toggle select (multi) ──
+function toggleSel(card) {
+  if (!card.classList.contains('disabled')) card.classList.toggle('selected');
+}
+
+// ── Builder ──
+function selBld(card) {
+  if (card.classList.contains('disabled')) return;
+  document.querySelectorAll('#bStep1 .bld-card').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+}
+let payN = 0;
+function togglePay(card) {
+  if (card.classList.contains('selected')) { card.classList.remove('selected'); payN--; }
+  else if (payN < 2)                       { card.classList.add('selected'); payN++; }
+  document.getElementById('payCount').textContent = payN;
+  document.getElementById('payBtn').disabled = payN < 2;
+}
+function bNext() {
+  if (!document.querySelector('#bStep1 .bld-card.selected')) return;
+  document.getElementById('bStep1').style.display = 'none';
+  document.getElementById('bStep2').style.display = '';
+  document.getElementById('bDot1').className = 'step-dot done';
+  document.getElementById('bDot2').className = 'step-dot active';
+}
+function resetBuilder() {
+  document.getElementById('bStep1').style.display = '';
+  document.getElementById('bStep2').style.display = 'none';
+  document.getElementById('bDot1').className = 'step-dot active';
+  document.getElementById('bDot2').className = 'step-dot';
+  document.querySelectorAll('#builderModal .bld-card, #builderModal .sel-card').forEach(c=>c.classList.remove('selected'));
+  payN = 0;
+  document.getElementById('payCount').textContent = '0';
+  document.getElementById('payBtn').disabled = true;
+}
+
+// ── Councillor (select one) ──
+function selOne(card, modalId, btnId) {
+  document.querySelectorAll('#' + modalId + ' .sel-card').forEach(c=>c.classList.remove('selected'));
+  card.classList.add('selected');
+  document.getElementById(btnId).disabled = false;
+}
+
+// ── Discard ──
+let discN = 0;
+function toggleDiscard(card) {
+  if (card.classList.contains('selected')) { card.classList.remove('selected'); discN--; }
+  else if (discN < 2)                      { card.classList.add('selected'); discN++; }
+  document.getElementById('dBtn').disabled = discN < 2;
+}
+function resetDiscard() {
+  discN = 0;
+  document.querySelectorAll('#discardModal .sel-card').forEach(c=>c.classList.remove('selected'));
+  document.getElementById('dBtn').disabled = true;
+}
+
+// ── Onboarding ──
+const obSteps = [
+  { title:'歡迎！', text:'這是你的遊戲桌面，讓我們快速導覽各個區域。', target:null, pos:{top:'40%',left:'50%',transform:'translate(-50%,-50%)'} },
+  { title:'對家區（上方）', text:'對家的手牌（背面）與建築。懸停頭像可查看詳細資訊與各工廠貨物狀態。', target:'.player-top', pos:{top:'160px',left:'50%',transform:'translateX(-50%)'} },
+  { title:'中央公共區', text:'牌堆張數、棄牌數、回合數，以及本回合五種貨物的價格牌。', target:'.center-area', pos:{top:'35%',left:'calc(50% + 200px)'} },
+  { title:'左右玩家區', text:'側邊玩家的手牌張數（＋裝飾扇形）與已建建築，懸停頭像可查看詳細資訊。', target:'.player-left', pos:{top:'35%',left:'240px'} },
+  { title:'遊戲指引（左下）', text:'即時顯示當前階段、行動結果與回合記錄。礦工行動結果也在這裡更新。', target:'.info-panel', pos:{top:'45%',left:'240px'} },
+  { title:'你的區域（下方）', text:'你的手牌可點擊選取。建築費用（右上）與分數（右下）顯示在卡片上。工廠貨物狀態標示在頭像旁。', target:'.player-bottom', pos:{top:'35%',left:'50%',transform:'translateX(-50%)'} },
+  { title:'設定抽屜（右下 i）', text:'可切換玩家資訊顯示模式（hover / always）、建築說明模式（精簡 / 詳細），或再次開啟此導覽。', target:null, pos:{bottom:'110px',right:'80px'} },
+];
+let obI = 0;
+function startOb() { obI = 0; document.getElementById('obOverlay').classList.add('open'); renderOb(); }
+function endOb()   { document.getElementById('obOverlay').classList.remove('open'); }
+function nextOb()  { obI++; if (obI >= obSteps.length) { endOb(); return; } renderOb(); }
+function renderOb() {
+  const s = obSteps[obI];
+  document.getElementById('obTitle').textContent = s.title;
+  document.getElementById('obText').textContent  = s.text;
+  document.getElementById('obStep').textContent  = (obI+1) + ' / ' + obSteps.length;
+  document.getElementById('obNext').textContent  = obI === obSteps.length-1 ? '完成' : '下一步';
+  const tip = document.getElementById('obTip');
+  tip.removeAttribute('style');
+  Object.assign(tip.style, s.pos || {});
+  const hl = document.getElementById('obHL');
+  if (s.target) {
+    const el = document.querySelector(s.target);
+    if (el) {
+      const r = el.getBoundingClientRect();
+      Object.assign(hl.style, { display:'block', top:(r.top-4)+'px', left:(r.left-4)+'px', width:(r.width+8)+'px', height:(r.height+8)+'px' });
+      return;
+    }
+  }
+  hl.style.display = 'none';
+}
+</script>
+</body>
+</html>
