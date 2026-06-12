@@ -116,14 +116,34 @@ chore(data): add buildings and roles JSON assets
 - [x] 使用者已驗收 UI 畫面
 ```
 
-使用者完成 commit、push、merge 後，切回 `main` 並 pull：
+使用者完成後依序執行：
 
 ```bash
-git switch main
+# 1. 在 feature branch 上 commit & push
+git add <files>
+git commit -m "feat(...): ..."
+git push -u origin <feature-branch>
+
+# 2. 開 PR 合併至 dev（測試站）
+#    → 等 CI 通過後 merge
+
+# 3. dev 測試確認無誤後，再開 PR 合併至 main（正式站）
+#    → 等 CI 通過後 merge
+
+# 4. 切回 dev 繼續下一個功能
+git switch dev
 git pull
 ```
 
-確認 `main` 更新後，AI agent 提供下一個功能的建議 branch 名稱。
+**分支環境對應：**
+
+| 分支 | 環境 | 對象 |
+|------|------|------|
+| `main` | 正式站（Production） | 團隊外的使用者 |
+| `dev` | 測試站（Staging） | 團隊內開發 |
+| `feat/*` `fix/*` `chore/*` | 本地開發 | 開發者本人 |
+
+確認 `dev` 更新後，AI agent 提供下一個功能的建議 branch 名稱。
 
 ---
 
@@ -138,6 +158,8 @@ git pull
 | 線稿圖 | `docs/wireframe/` |
 | 整體任務清單 | `docs/todo/overall-task-list.md` |
 | 每週 Todo | `docs/todo/` |
+| 完整牌組資料（卡片列表） | `docs/rules/san-juan-cards.md` |
+| 勝負判斷細則（計分規則） | `docs/rules/san-juan-victory.md` |
 
 ### SDD 參考規則
 

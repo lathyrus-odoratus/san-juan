@@ -206,7 +206,19 @@ V0.1 先定義單機優先：
 - E2E（後續）：
 - 多玩家流程 smoke test（可先用假資料玩家）
 
-## 14. 里程碑（建議）
+## 14. 分支與部署策略
+
+| 分支 | 環境 | 對象 |
+|------|------|------|
+| `main` | 正式站（Production） | 團隊外的使用者 |
+| `dev` | 測試站（Staging） | 團隊內開發驗證 |
+| `feat/*` `fix/*` `chore/*` | 本地開發 | 開發者本人 |
+
+開發流程：feature branch → PR 合入 `dev`（CI 通過）→ 測試站驗收 → PR 合入 `main`（CI 通過）→ 正式站更新。
+
+不直接在 `main` 或 `dev` 上開發。
+
+## 15. 里程碑（建議）
 - M1：專案骨架 + Discord 登入 + Lobby/Room UI
 - M2：Game Engine（核心回合 + 牌組資料）+ LocalStorage 持久化
 - M3：規則完整化 + 錯誤處理 + 測試補齊

@@ -1,10 +1,15 @@
 name: CI
 
+# 分支策略：
+#   main → 正式站（Production），面向團隊外使用者
+#   dev  → 測試站（Staging），供團隊內開發驗證
+# feature branch 完成後先合進 dev，dev 穩定後再合進 main
+
 on:
   push:
     branches: [main, dev]
   pull_request:
-    branches: [main]
+    branches: [main, dev]
 
 jobs:
   lint-and-test:
