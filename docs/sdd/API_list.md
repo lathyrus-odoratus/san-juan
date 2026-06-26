@@ -4,7 +4,7 @@
 
 ### 會員（Auth / User）
 
-> **[待決策 #1 #3]** `sdd.md §5.1` 只使用 Discord OAuth2 登入，不保留長期 token；此區塊的 email 註冊 / login / logout / 密碼管理 API 與其矛盾，需確認是否保留 → `docs/todo/pending-decisions.md`
+> **[已決策 #1 #3]** V0.1 僅使用 Discord OAuth2，不保留長期 token。以下 email/password 系列 API **延後實作**，暫不開發。
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
@@ -41,7 +41,7 @@
 
 ### 遊戲紀錄（History）
 
-> **[待決策 #2]** `sdd.md §1` 說不使用外部資料庫，但歷史對局與統計資料無法只靠 LocalStorage 跨裝置保存，需確認是否保留這兩支 API → `docs/todo/pending-decisions.md`
+> **[已決策 #2]** 無後端 DB，以下歷史對局 / 統計 API **延後實作**，暫不開發。
 
 | 方法 | 路徑 | 說明 |
 |------|------|------|
@@ -62,12 +62,9 @@
 | `client:produce` | 生產者：執行生產 |
 | `client:trade` | 貿易商：選擇賣出的商品 |
 | `client:councillor_select` | 議員：選擇保留的手牌（棄牌） |
+| `client:prospect` | 礦工：特權玩家觸發抽牌（不需 Modal，結果顯示於遊戲指引）|
 | `client:skip_action` | 跳過當前行動 |
 | `client:send_message` | 傳送聊天訊息 |
-
-> **[待決策 #4]** 礦工（Prospector）無對應 client 事件；若為自動抽牌不需玩家操作，需在此補充說明 → `docs/todo/pending-decisions.md`
->
-> **[待決策 #5]** `client:send_message` / `server:chat_message` 在 `sdd.md` 及 `layout-draft.md` 均未提及，需確認聊天室是否在 V0.1 範圍內 → `docs/todo/pending-decisions.md`
 
 ### Server → Client
 
@@ -133,7 +130,7 @@
 | 手牌 | string[] | 重複卡牌相同 ID |
 | 建築 | Building[] | 建築 ID 及卡牌上放置的卡牌數量（工廠貨物及教堂、銀行等建築的存款；後端存卡牌 ID）|
 
-> **[待決策 #2 #6]** 「後端存卡牌 ID」與 sdd.md 無資料庫方針矛盾；另 layout-draft.md 顯示「貨物數」為單一彙總數字，但此處按建築分開計算，顯示粒度需確認 → `docs/todo/pending-decisions.md`
+> **[已決策 #2 #6]** 無後端 DB，「後端存卡牌 ID」移除，貨物狀態由前端 LocalStorage 維護。貨物顯示以**按工廠分開**呈現（非單一彙總數字），layout-draft.md 已更新。
 | 總分 | number | 當前分數 |
 
 ### 職業

@@ -8,7 +8,6 @@ Software Design Document (SDD) v0.1
 - 不使用外部資料庫。
 - 玩家資料與遊玩過程狀態儲存在瀏覽器 LocalStorage。
 
-> **[待決策 #2]** 無資料庫的設計與 API_list.md 的歷史對局 / 統計資料 API 有矛盾，需確認是否保留後端儲存 → `docs/todo/pending-decisions.md`
 - 支援 Discord 遊玩流程（登入、建立/加入房間、分享房間連結、回合互動通知）。
 
 本版先建立可實作骨架；詳細規則流程、完整玩法與 UI 線稿由後續版本補上。
@@ -49,8 +48,6 @@ Software Design Document (SDD) v0.1
 - 取得並保存最小身份資訊：`discordId`, `username`, `avatar`.
 - 可登出並清除本地快取身份。
 
-> **[待決策 #1]** API_list.md 有 email/password 完整註冊登入系統，與此處 Discord Only 方針衝突，需確認以哪套為準 → `docs/todo/pending-decisions.md`
-
 ## 5.2 房間與對局管理
 - 建立房間：固定 4 人、可選擇公開/私有（私有用 room code）。
 - 加入房間：輸入 room code 或從 Discord 分享連結進入。
@@ -82,8 +79,6 @@ Software Design Document (SDD) v0.1
 - 可跳過
 - 可在設定中再次開啟導覽
 - 導覽狀態需保存於 LocalStorage（每位玩家裝置獨立）。
-
-> **[待決策 #7]** layout-draft.md 的 `i` 設定面板未包含「再次開啟導覽」選項，需補上 → `docs/todo/pending-decisions.md`
 
 ## 6. 非功能需求
 - 可靠性：LocalStorage 寫入失敗要有 fallback 提示（容量滿、隱私模式）。
@@ -164,8 +159,6 @@ interface GameEngine {
 - Scope：`identify`（V0.1 最小需求）。
 - Client Secret 僅在 Nitro server 端使用。
 - 登入成功後前端只拿到必要 profile，不保留長期 access token。
-
-> **[待決策 #1 #3]** API_list.md 有 email 登入並回傳 token / logout 撤銷 token，與此處 Discord-only 及不保留長期 token 的方針衝突 → `docs/todo/pending-decisions.md`
 
 ## 9.2 房間分享
 - 房主可生成分享連結：
