@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "playerCount": 4,
+  "initialHandSize": 4,
+  "handLimit": 7,
+  "towerHandLimit": 12,
+  "guardRoomHandLimit": 7,
+  "noGuardRoomHandLimit": 6,
+  "endgameBuildingCount": 12,
+  "goods": ["indigo", "sugar", "tobacco", "coffee", "silver"],
+  "guildHallScoring": "v2",
+  "monuments": ["statue", "victory_column", "hero"],
+  "expansionEnabled": true,
+  "expectedCardCount": {
+    "base": 110,
+    "expansion": 30,
+    "total": 140,
+    "pendingExpansionProduction": 4
+  }
+}

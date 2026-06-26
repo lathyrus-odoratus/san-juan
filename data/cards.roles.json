@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "roles": [
+    {
+      "id": "builder",
+      "name": "Builder",
+      "nameZh": "建築師",
+      "commonAction": "每位玩家可建造 1 棟建築",
+      "privilege": "費用少付 1 張牌"
+    },
+    {
+      "id": "producer",
+      "name": "Producer",
+      "nameZh": "工匠",
+      "commonAction": "每位玩家可生產 1 個貨物",
+      "privilege": "可額外多生產 1 個貨物"
+    },
+    {
+      "id": "trader",
+      "name": "Trader",
+      "nameZh": "商人",
+      "commonAction": "每位玩家可出售 1 個貨物",
+      "privilege": "可額外多出售 1 個貨物"
+    },
+    {
+      "id": "councillor",
+      "name": "Councillor",
+      "nameZh": "市長",
+      "commonAction": "每位玩家抽 2 張選 1 張",
+      "privilege": "共抽 5 張選 1 張"
+    },
+    {
+      "id": "prospector",
+      "name": "Prospector",
+      "nameZh": "礦工",
+      "commonAction": "無行動",
+      "privilege": "抽 1 張牌加入手牌"
+    }
+  ]
+}
