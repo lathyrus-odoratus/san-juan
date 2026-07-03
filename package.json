@@ -24,6 +24,7 @@
   "devDependencies": {
     "@nuxt/test-utils": "^4.0.3",
     "@playwright/test": "^1.60.0",
+    "@types/node": "^26.1.0",
     "@vue/test-utils": "^2.4.11",
     "happy-dom": "^20.10.2",
     "vitest": "^4.1.8"
