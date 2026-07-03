@@ -292,7 +292,7 @@
       "nameZh": "市政廳",
       "category": "city",
       "cost": 6,
-      "vp": 6,
+      "vp": 0,
       "count": 2,
       "tags": ["violet", "large", "endgame_scoring"],
       "effect": { "phase": "game_end", "text": "檯面上每棟城市建築（含市政廳本身）各 +1 VP。" }
@@ -303,7 +303,7 @@
       "nameZh": "工業協會",
       "category": "city",
       "cost": 6,
-      "vp": 6,
+      "vp": 0,
       "count": 2,
       "tags": ["violet", "large", "endgame_scoring"],
       "effect": { "phase": "game_end", "text": "（二版）每棟生產建築 +1 VP，且每種不同生產建築類型再 +1 VP。" }
@@ -314,7 +314,7 @@
       "nameZh": "皇宮",
       "category": "city",
       "cost": 6,
-      "vp": 6,
+      "vp": 0,
       "count": 2,
       "tags": ["violet", "large", "endgame_scoring"],
       "effect": { "phase": "game_end", "text": "皇宮以外所有 VP 總和除以 4（無條件捨去）為額外 VP，必須最後計算。" }
@@ -325,7 +325,7 @@
       "nameZh": "凱旋門",
       "category": "city",
       "cost": 6,
-      "vp": 6,
+      "vp": 0,
       "count": 2,
       "tags": ["violet", "large", "endgame_scoring"],
       "effect": { "phase": "game_end", "text": "依紀念碑種類數計分：1 種 +4、2 種 +6、3 種 +8 VP。" }
@@ -435,7 +435,7 @@
       "nameZh": "住宅",
       "category": "city",
       "cost": 6,
-      "vp": 6,
+      "vp": 0,
       "count": 2,
       "tags": ["violet", "expansion", "large", "endgame_scoring"],
       "effect": { "phase": "game_end", "text": "依相同費用建築『每 3 種不同』分組計分：第 1 組 +4、第 2 組 +3、第 3 組 +2、第 4 組 +1 VP。" }

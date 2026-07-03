@@ -141,6 +141,14 @@ describe('cards.buildings.json', () => {
     }
   })
 
+  it('帶 endgame_scoring tag 的建築 vp 應為 0（分數僅來自終局計分規則）', () => {
+    const endgameScoring = cards.filter(c => c.tags.includes('endgame_scoring'))
+    expect(endgameScoring.length).toBeGreaterThan(0)
+    for (const card of endgameScoring) {
+      expect(card.vp, `vp of ${card.id}`).toBe(0)
+    }
+  })
+
   it('總張數符合預期（base 110 / expansion 30 / total 140）', () => {
     const sum = (list: BuildingCard[]): number => list.reduce((acc, c) => acc + c.count, 0)
     const base = cards.filter(c => !c.tags.includes('expansion'))
