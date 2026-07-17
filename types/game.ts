@@ -56,6 +56,29 @@ export interface GameSnapshot {
   updatedAt: number
 }
 
+export interface GameLogEntry {
+  id: string
+  gameId: string
+  type: string
+  message: string
+  createdAt: number
+  payload?: Record<string, unknown>
+}
+
+export interface GameResultPlayer {
+  playerId: string
+  username: string
+  score: number
+  isWinner: boolean
+}
+
+export interface GameResult {
+  gameId: string
+  isGameOver: boolean
+  winner: string | null
+  players: GameResultPlayer[]
+}
+
 /**
  * All mutations to a GameSnapshot flow through dispatched actions.
  */

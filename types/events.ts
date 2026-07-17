@@ -30,6 +30,8 @@ export interface ServerToClientEvents {
  * Events emitted by clients to the server.
  */
 export interface ClientToServerEvents {
+  'client:join_room': (payload: { roomId: string }) => void
+  'client:leave_room': (payload: { roomId: string }) => void
   'client:send_message': (payload: { roomId: string; content: string }) => void
   'client:prospect': (payload: { gameId: string }) => void
 }
