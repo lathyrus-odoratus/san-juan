@@ -6,6 +6,14 @@ export type RoomVisibility = 'public' | 'private'
 
 export type RoomStatus = 'waiting' | 'playing' | 'closed'
 
+export interface CreateRoomRequest {
+  visibility: RoomVisibility
+}
+
+export interface ReadyRoomRequest {
+  isReady?: boolean
+}
+
 /**
  * A player seated in a room, with lobby-specific flags.
  */
