@@ -1,8 +1,11 @@
 import { requireAuthSession } from '~~/server/utils/authSession'
-import { startRoom } from '~~/server/utils/roomStore'
+import { startGameForRoom } from '~~/server/utils/gameLifecycle'
+import { emitRoomUpdated } from '~~/server/utils/roomSocketEvents'
 
 export default defineEventHandler(async (event) => {
   const host = await requireAuthSession(event)
 
-  return startRoom(getRouterParam(event, 'roomId') ?? '', host)
+  const room = startGameForRoom(getRouterParam(event, 'roomId') ?? '', host)
+  emitRoomUpdated(room)
+  return room
 })

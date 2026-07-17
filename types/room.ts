@@ -28,6 +28,7 @@ export interface RoomPlayer extends PlayerProfile {
 export interface Room {
   roomId: string
   roomCode: string
+  gameId: string | null
   hostPlayerId: string
   visibility: RoomVisibility
   status: RoomStatus

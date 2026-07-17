@@ -94,6 +94,7 @@ export function createRoomForPlayer(player: PlayerProfile, request: Partial<Crea
   const room: Room = {
     roomId: createId('room'),
     roomCode: createRoomCode(),
+    gameId: null,
     hostPlayerId: player.discordId,
     visibility: normalizeVisibility(request.visibility),
     status: 'waiting',
@@ -192,9 +193,13 @@ export function kickPlayer(roomIdOrCode: string, playerId: string, host: PlayerP
   }))
 }
 
-export function startRoom(roomIdOrCode: string, host: PlayerProfile): Room {
+export function startRoom(roomIdOrCode: string, host: PlayerProfile, gameId?: string): Room {
   const room = requireRoom(roomIdOrCode)
   requireRoomHost(room, host)
+
+  if (room.status !== 'waiting') {
+    throw createError({ statusCode: 409, statusMessage: 'ROOM_NOT_STARTABLE' })
+  }
 
   if (room.players.length !== MAX_ROOM_PLAYERS) {
     throw createError({ statusCode: 409, statusMessage: 'ROOM_NOT_FULL' })
@@ -206,7 +211,16 @@ export function startRoom(roomIdOrCode: string, host: PlayerProfile): Room {
 
   return cloneRoom(touchRoom({
     ...room,
+    gameId: gameId ?? room.gameId,
     status: 'playing'
+  }))
+}
+
+export function assignRoomGame(roomIdOrCode: string, gameId: string): Room {
+  const room = requireRoom(roomIdOrCode)
+  return cloneRoom(touchRoom({
+    ...room,
+    gameId
   }))
 }
 

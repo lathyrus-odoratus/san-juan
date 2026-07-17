@@ -18,6 +18,8 @@
     "@nuxt/eslint": "^1.15.2",
     "eslint": "^10.3.0",
     "nuxt": "^4.4.4",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
     "vue": "^3.5.33",
     "vue-router": "^5.0.6"
   },

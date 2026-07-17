@@ -1,9 +1,12 @@
 import type { Ref } from 'vue'
+import type { ChatMessage, ServerError } from '~~/types/events'
 import type { Room, RoomVisibility } from '~~/types/room'
 
 export interface UseRoomReturn {
   rooms: Ref<Room[]>
   currentRoom: Ref<Room | null>
+  chatMessages: Ref<ChatMessage[]>
+  socketErrors: Ref<ServerError[]>
   fetchRooms: () => Promise<Room[]>
   getRoom: (roomId: string) => Promise<Room>
   createRoom: (visibility: RoomVisibility) => Promise<Room>
@@ -12,6 +15,7 @@ export interface UseRoomReturn {
   setReady: (isReady?: boolean) => Promise<Room>
   kickPlayer: (playerId: string) => Promise<Room>
   startRoom: () => Promise<Room>
+  sendMessage: (content: string) => void
 }
 
 /**
@@ -21,6 +25,9 @@ export interface UseRoomReturn {
 export function useRoom(): UseRoomReturn {
   const rooms = useState<Room[]>('sj-room-list', () => [])
   const currentRoom = useState<Room | null>('sj-current-room', () => null)
+  const chatMessages = useState<ChatMessage[]>('sj-room-chat-messages', () => [])
+  const socketErrors = useState<ServerError[]>('sj-room-socket-errors', () => [])
+  const { player } = useAuth()
 
   function upsertRoom(room: Room): void {
     rooms.value = [
@@ -33,6 +40,70 @@ export function useRoom(): UseRoomReturn {
     }
   }
 
+  function connectSocketRoom(roomId: string): void {
+    if (!import.meta.client) {
+      return
+    }
+
+    const { $gameSocket } = useNuxtApp()
+    if (!$gameSocket.connected) {
+      $gameSocket.connect()
+    }
+    $gameSocket.emit('client:join_room', { roomId })
+  }
+
+  if (import.meta.client) {
+    const isSocketBound = useState('sj-room-socket-bound', () => false)
+
+    if (!isSocketBound.value) {
+      const { $gameSocket } = useNuxtApp()
+      isSocketBound.value = true
+
+      $gameSocket.on('server:room_joined', (room) => {
+        upsertRoom(room)
+      })
+
+      $gameSocket.on('server:room_updated', (room) => {
+        upsertRoom(room)
+      })
+
+      $gameSocket.on('server:player_kicked', (payload) => {
+        if (payload.playerId === player.value?.discordId) {
+          currentRoom.value = null
+        }
+      })
+
+      $gameSocket.on('server:room_closed', (payload) => {
+        rooms.value = rooms.value.filter(room => room.roomId !== payload.roomId)
+        if (currentRoom.value?.roomId === payload.roomId) {
+          currentRoom.value = null
+        }
+      })
+
+      $gameSocket.on('server:chat_message', (message) => {
+        chatMessages.value = [...chatMessages.value, message]
+      })
+
+      $gameSocket.on('server:error', (error) => {
+        socketErrors.value = [...socketErrors.value, error]
+      })
+
+      watch(
+        () => currentRoom.value?.roomId,
+        (roomId, previousRoomId) => {
+          if (previousRoomId) {
+            $gameSocket.emit('client:leave_room', { roomId: previousRoomId })
+          }
+
+          if (roomId) {
+            connectSocketRoom(roomId)
+          }
+        },
+        { immediate: true }
+      )
+    }
+  }
+
   async function fetchRooms(): Promise<Room[]> {
     rooms.value = await $fetch<Room[]>('/api/rooms')
     return rooms.value
@@ -41,6 +112,7 @@ export function useRoom(): UseRoomReturn {
   async function getRoom(roomId: string): Promise<Room> {
     const room = await $fetch<Room>(`/api/rooms/${roomId}`)
     upsertRoom(room)
+    connectSocketRoom(room.roomId)
     return room
   }
 
@@ -50,12 +122,14 @@ export function useRoom(): UseRoomReturn {
       body: { visibility }
     })
     upsertRoom(room)
+    connectSocketRoom(room.roomId)
     return room
   }
 
   async function joinRoom(roomCode: string): Promise<Room> {
     const room = await $fetch<Room>(`/api/rooms/${roomCode}/join`, { method: 'POST' })
     upsertRoom(room)
+    connectSocketRoom(room.roomId)
     return room
   }
 
@@ -106,9 +180,25 @@ export function useRoom(): UseRoomReturn {
     return room
   }
 
+  function sendMessage(content: string): void {
+    const roomId = currentRoom.value?.roomId
+    if (!roomId || !import.meta.client) {
+      return
+    }
+
+    const { $gameSocket } = useNuxtApp()
+    if (!$gameSocket.connected) {
+      $gameSocket.connect()
+    }
+
+    $gameSocket.emit('client:send_message', { roomId, content })
+  }
+
   return {
     rooms,
     currentRoom,
+    chatMessages,
+    socketErrors,
     fetchRooms,
     getRoom,
     createRoom,
@@ -116,6 +206,7 @@ export function useRoom(): UseRoomReturn {
     leaveRoom,
     setReady,
     kickPlayer,
-    startRoom
+    startRoom,
+    sendMessage
   }
 }

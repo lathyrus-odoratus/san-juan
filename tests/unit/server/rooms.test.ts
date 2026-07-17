@@ -7,6 +7,7 @@ import {
   joinRoom,
   kickPlayer,
   leaveRoom,
+  listRooms,
   setPlayerReady,
   startRoom
 } from '~~/server/utils/roomStore'
@@ -40,6 +41,25 @@ describe('roomStore', () => {
     ])
   })
 
+  it('lists public rooms after creation and hides private rooms', () => {
+    const publicRoom = createRoomForPlayer(player('host'), { visibility: 'public' })
+    createRoomForPlayer(player('private-host'), { visibility: 'private' })
+
+    expect(listRooms()).toEqual([
+      expect.objectContaining({
+        roomId: publicRoom.roomId,
+        status: 'waiting',
+        visibility: 'public'
+      })
+    ])
+  })
+
+  it('returns room details by room id', () => {
+    const room = createRoomForPlayer(player('host'), { visibility: 'public' })
+
+    expect(getRoom(room.roomId)).toEqual(room)
+  })
+
   it('allows players to join by room id or room code until the room is full', () => {
     const room = createRoomForPlayer(player('host'), { visibility: 'public' })
 
@@ -49,6 +69,13 @@ describe('roomStore', () => {
 
     expect(fullRoom.players).toHaveLength(4)
     expect(() => joinRoom(room.roomId, player('p4'))).toThrow('ROOM_FULL')
+  })
+
+  it('blocks host from starting before the room has four players', () => {
+    const host = player('host')
+    const room = createRoomForPlayer(host, { visibility: 'public' })
+
+    expect(() => startRoom(room.roomId, host)).toThrow('ROOM_NOT_FULL')
   })
 
   it('requires every player to be ready before host starts the room', () => {
@@ -77,6 +104,29 @@ describe('roomStore', () => {
     expect(() => startRoom(room.roomId, guest)).toThrow('HOST_ONLY')
   })
 
+  it('removes kicked players from the room', () => {
+    const host = player('host')
+    const guest = player('guest')
+    const room = createRoomForPlayer(host, { visibility: 'public' })
+    joinRoom(room.roomId, guest)
+
+    const updatedRoom = kickPlayer(room.roomId, guest.discordId, host)
+
+    expect(updatedRoom.players.map(roomPlayer => roomPlayer.discordId)).toEqual(['host'])
+  })
+
+  it('removes non-host players when they leave', () => {
+    const host = player('host')
+    const guest = player('guest')
+    const room = createRoomForPlayer(host, { visibility: 'public' })
+    joinRoom(room.roomId, guest)
+
+    const updatedRoom = leaveRoom(room.roomId, guest)
+
+    expect(updatedRoom.status).toBe('waiting')
+    expect(updatedRoom.players.map(roomPlayer => roomPlayer.discordId)).toEqual([host.discordId])
+  })
+
   it('closes the room when the host leaves', () => {
     const host = player('host')
     const room = createRoomForPlayer(host, { visibility: 'public' })
@@ -87,5 +137,13 @@ describe('roomStore', () => {
     expect(closedRoom.status).toBe('closed')
     expect(closedRoom.players).toHaveLength(0)
     expect(() => getRoom(room.roomId)).toThrow('ROOM_NOT_FOUND')
+  })
+
+  it('clears in-memory rooms after store reset', () => {
+    createRoomForPlayer(player('host'), { visibility: 'public' })
+
+    clearRoomStoreForTest()
+
+    expect(listRooms()).toEqual([])
   })
 })
