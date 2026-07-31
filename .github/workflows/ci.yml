@@ -71,3 +71,32 @@ jobs:
           name: playwright-report
           path: playwright-report/
           retention-days: 7
+  build-and-push:
+    name: Build & Push Docker Image
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Login to your Private Registry
+      - name: Login to NAS Registry
+        run: |
+          echo "${{ secrets.NAS_REGISTRY_PASSWORD }}" | docker login registry.parsons125.in -u "${{ secrets.NAS_REGISTRY_USERNAME }}" --password-stdin
+
+      # Build and Push
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            registry.parsons125.in/san-juan:latest
+
+      # Trigger Webhook
+      - name: Trigger NAS Redeploy
+        run: |
+          curl -sf -X POST "https://webhook.parsons125.in/hooks/redeploy-san-juan?token=${{ secrets.DEPLOY_TOKEN }}"
