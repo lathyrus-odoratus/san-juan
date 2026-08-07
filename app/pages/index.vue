@@ -5,5 +5,6 @@
 <template>
   <main>
     <h1>San Juan Online</h1>
+    <P>測試推不推得上去</P>
   </main>
 </template>
