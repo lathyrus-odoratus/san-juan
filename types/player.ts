@@ -6,5 +6,5 @@
 export interface PlayerProfile {
   discordId: string
   username: string
-  avatar: string | null
+  avatar: string | null // 頭像
 }

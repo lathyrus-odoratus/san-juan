@@ -3,10 +3,10 @@ import type { Ref } from 'vue'
 import type { PlayerProfile } from '~~/types/player'
 
 export interface UseAuthReturn {
-  isLoggedIn: Ref<boolean>
-  player: Ref<PlayerProfile | null>
-  login: () => void
-  logout: () => Promise<void>
+  isLoggedIn: Ref<boolean> // 現在有沒有登入
+  player: Ref<PlayerProfile | null> // 有登入的話放 profile 沒登入 null 
+  login: () => void // 包好的 login 函式，return 不使用
+  logout: () => Promise<void> // 包好的 logout 函式
 }
 
 /**
