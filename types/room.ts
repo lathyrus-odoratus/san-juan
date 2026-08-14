@@ -35,4 +35,5 @@ export interface Room {
   players: RoomPlayer[]
   createdAt: number
   updatedAt: number
+  maxPlayers: number
 }
