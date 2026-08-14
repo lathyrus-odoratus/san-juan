@@ -10,6 +10,6 @@ const {login } = useAuth();
 <template>
   <main>
     <h1>Login</h1>
-    <button @click="login()" class="btn">Discord 登入</button>
+    <button class="btn" @click="login()">Discord 登入</button>
   </main>
 </template>

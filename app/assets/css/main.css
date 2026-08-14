@@ -14,3 +14,11 @@
 .btn {
     @apply outline bg-blue-50 p-1 rounded 
 }
+
+h1 {
+    @apply text-3xl
+}
+
+h2 {
+    @apply text-2xl
+}

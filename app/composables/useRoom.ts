@@ -104,11 +104,13 @@ export function useRoom(): UseRoomReturn {
     }
   }
 
+  // 房間列表
   async function fetchRooms(): Promise<Room[]> {
     rooms.value = await $fetch<Room[]>('/api/rooms')
     return rooms.value
   }
 
+  //個別房間
   async function getRoom(roomId: string): Promise<Room> {
     const room = await $fetch<Room>(`/api/rooms/${roomId}`)
     upsertRoom(room)

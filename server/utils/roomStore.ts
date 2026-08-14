@@ -100,7 +100,8 @@ export function createRoomForPlayer(player: PlayerProfile, request: Partial<Crea
     status: 'waiting',
     players: [toRoomPlayer(player, true)],
     createdAt: timestamp,
-    updatedAt: timestamp
+    updatedAt: timestamp,
+    maxPlayers: MAX_ROOM_PLAYERS
   }
 
   rooms.set(room.roomId, room)
