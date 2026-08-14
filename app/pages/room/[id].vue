@@ -1,9 +1,7 @@
 <script setup lang="ts">
-import { er } from 'vue-router/dist/index-BN0B0y8a.js';
-
 // Room waiting page — player slots, ready/start, chat.
 
-const { currentRoom, getRoom, leaveRoom, setReady, startRoom, kickPlayer, sendMessage } = useRoom();
+const { currentRoom, getRoom, leaveRoom, setReady, startRoom, kickPlayer, _sendMessage } = useRoom();
 
 const route = useRoute()
 const roomId = computed(() => route.params.id as string)
@@ -38,6 +36,14 @@ async function handleReady(){
   }
 }
 
+async function handleStartRoom(){
+  try{
+    await startRoom()
+  }catch(error){
+    console.error('開始失敗',error)
+  }
+}
+
 </script>
 
 <template>
@@ -46,7 +52,7 @@ async function handleReady(){
 
     <!-- 玩家卡片 -->
     <ul class="flex justify-between items-center">
-      <li class="list-none p-3 border " v-for="player in currentRoom?.players" :key="player.discordId">
+      <li v-for="player in currentRoom?.players" :key="player.discordId" class="list-none p-3 border ">
         <p>暱稱:{{player.username}}</p>
         <p>準備狀態:{{player.isReady}}</p>
         <p v-if="player.isHost">房主</p>
@@ -60,7 +66,7 @@ async function handleReady(){
         <button class="btn" @click="handleReady()">準備</button>
       </li>
       <li>
-        <button class="btn">開始(僅限房主)</button>
+        <button class="btn" @click="handleStartRoom()">開始(僅限房主)</button>
       </li>
       <li>
         <button class="btn" @click="handleLeaveRoom">離開房間</button>
