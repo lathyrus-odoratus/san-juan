@@ -36,23 +36,48 @@ describe('gameSocketServer room events', () => {
   })
 
   it('resolves valid chat message into server:chat_message payload', () => {
-    const room = createRoomForPlayer(player('host'), { visibility: 'public' })
+    const host = player('host')
+    const room = createRoomForPlayer(host, { visibility: 'public' })
 
-    expect(resolveSendMessage('socket-1', room.roomId, ' hello ')).toEqual({
+    expect(resolveSendMessage(host, room.roomId, ' hello ')).toEqual({
       type: 'chat_message',
       roomId: room.roomId,
       message: expect.objectContaining({
-        playerId: 'socket-1',
-        username: 'Player',
+        playerId: 'host',
+        username: 'player-host',
         content: 'hello'
       })
+    })
+  })
+
+  it('rejects chat messages from unauthenticated senders with AUTH_ERROR', () => {
+    const room = createRoomForPlayer(player('host'), { visibility: 'public' })
+
+    expect(resolveSendMessage(null, room.roomId, 'hello')).toEqual({
+      type: 'error',
+      error: {
+        code: 'AUTH_ERROR',
+        message: 'Discord login is required to chat.'
+      }
+    })
+  })
+
+  it('rejects chat messages from players outside the room with ROOM_ACCESS_DENIED', () => {
+    const room = createRoomForPlayer(player('host'), { visibility: 'public' })
+
+    expect(resolveSendMessage(player('outsider'), room.roomId, 'hello')).toEqual({
+      type: 'error',
+      error: {
+        code: 'ROOM_ACCESS_DENIED',
+        message: 'Only players seated in the room can chat.'
+      }
     })
   })
 
   it('rejects empty chat messages with EMPTY_MESSAGE', () => {
     const room = createRoomForPlayer(player('host'), { visibility: 'public' })
 
-    expect(resolveSendMessage('socket-1', room.roomId, '   ')).toEqual({
+    expect(resolveSendMessage(player('host'), room.roomId, '   ')).toEqual({
       type: 'error',
       error: {
         code: 'EMPTY_MESSAGE',
@@ -62,7 +87,7 @@ describe('gameSocketServer room events', () => {
   })
 
   it('rejects chat messages for missing rooms with ROOM_NOT_FOUND', () => {
-    expect(resolveSendMessage('socket-1', 'missing-room', 'hello')).toEqual({
+    expect(resolveSendMessage(player('host'), 'missing-room', 'hello')).toEqual({
       type: 'error',
       error: {
         code: 'ROOM_NOT_FOUND',

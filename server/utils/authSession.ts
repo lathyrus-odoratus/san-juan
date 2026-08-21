@@ -1,3 +1,6 @@
+import { ServerResponse } from 'node:http'
+import type { IncomingMessage } from 'node:http'
+import { createEvent, getSession } from 'h3'
 import type { H3Event, SessionConfig } from 'h3'
 import type { PlayerProfile } from '~~/types/player'
 
@@ -23,4 +26,20 @@ export async function requireAuthSession(event: H3Event): Promise<PlayerProfile>
     throw createError({ statusCode: 401, statusMessage: 'AUTH_ERROR' })
   }
   return profile
+}
+
+/**
+ * Resolve the Discord identity from a raw request (Socket.io handshake).
+ * Socket.io has no H3Event, so a throwaway event wraps the request cookies.
+ */
+export async function getAuthSessionFromRequest(request: IncomingMessage): Promise<PlayerProfile | null> {
+  const config = useRuntimeConfig()
+  const event = createEvent(request, new ServerResponse(request))
+  const session = await getSession<PlayerProfile>(event, {
+    password: config.sessionSecret,
+    name: SESSION_COOKIE_NAME,
+    cookie: { sameSite: 'lax' }
+  })
+
+  return session.data?.discordId ? session.data : null
 }

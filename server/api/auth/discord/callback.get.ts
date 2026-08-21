@@ -22,7 +22,9 @@ export default defineEventHandler(async (event) => {
 
     return sendRedirect(event, '/lobby')
   }
-  catch {
+  catch (error) {
+    // Discord 回傳的失敗原因只有 server log 看得到，前端一律導回 AUTH_ERROR
+    console.error('[auth] discord callback failed:', error)
     return sendRedirect(event, '/login?error=AUTH_ERROR')
   }
 })

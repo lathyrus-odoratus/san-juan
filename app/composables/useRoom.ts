@@ -19,8 +19,7 @@ export interface UseRoomReturn {
 }
 
 /**
- * Room / lobby composable (REST + Socket.io).
- * Socket.io live updates are added in the next API foundation step.
+ * Room / lobby composable (REST + Socket.io live updates).
  */
 export function useRoom(): UseRoomReturn {
   const rooms = useState<Room[]>('sj-room-list', () => [])
@@ -28,6 +27,8 @@ export function useRoom(): UseRoomReturn {
   const chatMessages = useState<ChatMessage[]>('sj-room-chat-messages', () => [])
   const socketErrors = useState<ServerError[]>('sj-room-socket-errors', () => [])
   const { player } = useAuth()
+  // SSR 時 $fetch 不會帶上瀏覽器 cookie，內部 API 會被判為未登入
+  const requestFetch = useRequestFetch()
 
   function upsertRoom(room: Room): void {
     rooms.value = [
@@ -95,6 +96,12 @@ export function useRoom(): UseRoomReturn {
             $gameSocket.emit('client:leave_room', { roomId: previousRoomId })
           }
 
+          if (roomId !== previousRoomId) {
+            // 聊天訊息與 socket 錯誤都以房間為單位，換房時清空
+            chatMessages.value = []
+            socketErrors.value = []
+          }
+
           if (roomId) {
             connectSocketRoom(roomId)
           }
@@ -106,20 +113,20 @@ export function useRoom(): UseRoomReturn {
 
   // 房間列表
   async function fetchRooms(): Promise<Room[]> {
-    rooms.value = await $fetch<Room[]>('/api/rooms')
+    rooms.value = await requestFetch<Room[]>('/api/rooms')
     return rooms.value
   }
 
   //個別房間
   async function getRoom(roomId: string): Promise<Room> {
-    const room = await $fetch<Room>(`/api/rooms/${roomId}`)
+    const room = await requestFetch<Room>(`/api/rooms/${roomId}`)
     upsertRoom(room)
     connectSocketRoom(room.roomId)
     return room
   }
 
   async function createRoom(visibility: RoomVisibility): Promise<Room> {
-    const room = await $fetch<Room>('/api/rooms', {
+    const room = await requestFetch<Room>('/api/rooms', {
       method: 'POST',
       body: { visibility }
     })
@@ -129,7 +136,7 @@ export function useRoom(): UseRoomReturn {
   }
 
   async function joinRoom(roomCode: string): Promise<Room> {
-    const room = await $fetch<Room>(`/api/rooms/${roomCode}/join`, { method: 'POST' })
+    const room = await requestFetch<Room>(`/api/rooms/${roomCode}/join`, { method: 'POST' })
     upsertRoom(room)
     connectSocketRoom(room.roomId)
     return room
@@ -141,7 +148,7 @@ export function useRoom(): UseRoomReturn {
       return
     }
 
-    const room = await $fetch<Room>(`/api/rooms/${roomId}/leave`, { method: 'POST' })
+    const room = await requestFetch<Room>(`/api/rooms/${roomId}/leave`, { method: 'POST' })
     rooms.value = rooms.value.filter(existingRoom => existingRoom.roomId !== room.roomId)
     currentRoom.value = null
   }
@@ -152,7 +159,7 @@ export function useRoom(): UseRoomReturn {
       throw new Error('setReady requires currentRoom')
     }
 
-    const room = await $fetch<Room>(`/api/rooms/${roomId}/ready`, {
+    const room = await requestFetch<Room>(`/api/rooms/${roomId}/ready`, {
       method: 'PUT',
       body: { isReady }
     })
@@ -166,7 +173,7 @@ export function useRoom(): UseRoomReturn {
       throw new Error('kickPlayer requires currentRoom')
     }
 
-    const room = await $fetch<Room>(`/api/rooms/${roomId}/kick/${playerId}`, { method: 'POST' })
+    const room = await requestFetch<Room>(`/api/rooms/${roomId}/kick/${playerId}`, { method: 'POST' })
     upsertRoom(room)
     return room
   }
@@ -177,7 +184,7 @@ export function useRoom(): UseRoomReturn {
       throw new Error('startRoom requires currentRoom')
     }
 
-    const room = await $fetch<Room>(`/api/rooms/${roomId}/start`, { method: 'POST' })
+    const room = await requestFetch<Room>(`/api/rooms/${roomId}/start`, { method: 'POST' })
     upsertRoom(room)
     return room
   }

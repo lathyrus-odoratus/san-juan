@@ -1,9 +1,12 @@
-import { Server } from 'socket.io'
-import type { Server as HttpServer } from 'node:http'
+import type { Server } from 'socket.io'
 import type { ChatMessage, ClientToServerEvents, ServerError, ServerToClientEvents } from '~~/types/events'
+import type { PlayerProfile } from '~~/types/player'
+import { getAuthSessionFromRequest } from '~~/server/utils/authSession'
 import { getRoom } from '~~/server/utils/roomStore'
 import { emitChatMessage, onRoomSocketEvent } from '~~/server/utils/roomSocketEvents'
 import type { Room } from '~~/types/room'
+
+export type GameIoServer = Server<ClientToServerEvents, ServerToClientEvents>
 
 export interface GameSocketServer {
   close: () => void
@@ -35,7 +38,21 @@ export function resolveJoinRoom(roomId: string): JoinRoomResult {
   }
 }
 
-export function resolveSendMessage(socketId: string, roomId: string, content: string): SendMessageResult {
+export function resolveSendMessage(
+  sender: PlayerProfile | null,
+  roomId: string,
+  content: string
+): SendMessageResult {
+  if (!sender) {
+    return {
+      type: 'error',
+      error: {
+        code: 'AUTH_ERROR',
+        message: 'Discord login is required to chat.'
+      }
+    }
+  }
+
   const trimmedContent = content.trim()
   if (!trimmedContent) {
     return {
@@ -48,13 +65,23 @@ export function resolveSendMessage(socketId: string, roomId: string, content: st
   }
 
   try {
-    getRoom(roomId)
+    const room = getRoom(roomId)
+    if (!room.players.some(roomPlayer => roomPlayer.discordId === sender.discordId)) {
+      return {
+        type: 'error',
+        error: {
+          code: 'ROOM_ACCESS_DENIED',
+          message: 'Only players seated in the room can chat.'
+        }
+      }
+    }
+
     return {
       type: 'chat_message',
       roomId,
       message: {
-        playerId: socketId,
-        username: 'Player',
+        playerId: sender.discordId,
+        username: sender.username,
         content: trimmedContent,
         sentAt: Date.now()
       }
@@ -71,10 +98,7 @@ export function resolveSendMessage(socketId: string, roomId: string, content: st
   }
 }
 
-export function setupGameSocketServer(server: HttpServer): GameSocketServer {
-  const io = new Server<ClientToServerEvents, ServerToClientEvents>(server, {
-    path: '/socket.io'
-  })
+export function setupGameSocketServer(io: GameIoServer): GameSocketServer {
   const gameNamespace = io.of('/game')
 
   const removeRoomSocketListener = onRoomSocketEvent((event) => {
@@ -98,6 +122,9 @@ export function setupGameSocketServer(server: HttpServer): GameSocketServer {
   })
 
   gameNamespace.on('connection', (socket) => {
+    // Identity comes from the session cookie in the handshake, never from the client payload.
+    const senderPromise = getAuthSessionFromRequest(socket.request).catch(() => null)
+
     socket.on('client:join_room', (payload) => {
       const result = resolveJoinRoom(payload.roomId)
       if (result.type === 'error') {
@@ -113,8 +140,8 @@ export function setupGameSocketServer(server: HttpServer): GameSocketServer {
       socket.leave(payload.roomId)
     })
 
-    socket.on('client:send_message', (payload) => {
-      const result = resolveSendMessage(socket.id, payload.roomId, payload.content)
+    socket.on('client:send_message', async (payload) => {
+      const result = resolveSendMessage(await senderPromise, payload.roomId, payload.content)
       if (result.type === 'error') {
         socket.emit('server:error', result.error)
         return
