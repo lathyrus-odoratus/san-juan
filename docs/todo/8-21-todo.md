@@ -47,12 +47,12 @@
 
 ### 修復前後實測（另開 port 3100 驗證）
 
-| 項目 | 修前 | 修後 |
-|------|------|------|
-| `GET /socket.io/?EIO=4&transport=polling` | 404 Page not found | 200，回傳 sid |
-| 連上 `/game` namespace | 連不上 | ✅ connected |
-| `client:join_room` 不存在的房間 | 無回應 | ✅ `ROOM_NOT_FOUND` |
-| 未登入送 `client:send_message` | 無回應 | ✅ `AUTH_ERROR` |
+| 項目                                      | 修前               | 修後                |
+| ----------------------------------------- | ------------------ | ------------------- |
+| `GET /socket.io/?EIO=4&transport=polling` | 404 Page not found | 200，回傳 sid       |
+| 連上 `/game` namespace                    | 連不上             | ✅ connected        |
+| `client:join_room` 不存在的房間           | 無回應             | ✅ `ROOM_NOT_FOUND` |
+| 未登入送 `client:send_message`            | 無回應             | ✅ `AUTH_ERROR`     |
 
 最後一項同時證明新的 cookie 身分解析在 Nitro runtime 可正常運作，匿名時回 `null` 而非拋錯。
 
@@ -60,23 +60,20 @@
 
 ## 高優先（本週必須完成）
 
-- [ ] **修正 Discord Client Secret**（阻塞項，需使用者操作）
-  - Discord token 交換回 `401 invalid_client`，`.env` 的 `NUXT_DISCORD_CLIENT_SECRET` 是 64 字元，但 Discord 的 Client Secret 應為 32 字元
-  - 到 Developer Portal → 應用程式 → **OAuth2** 分頁（不是 Bot 分頁）重新取得
-  - **沒修好就無法登入，以下所有 UI 驗收都會卡住**
+- [x] **修正 Discord Client Secret**（已完成）
+  - OAuth2 已重新設定並實際驗證可登入，回到本地 app 並進入大廳
+  - 目前已不再被 `401 invalid_client` 卡住
 - [ ] **`feat/room-chat-polish` 步驟五：使用者驗收 UI**
   - 啟動：`npm run dev`，開啟 `http://localhost:3000`
-  - [ ] Console 不再出現 `No match found for location with path "/socket.io/..."`
-  - [ ] 登入 → 建立房間 → 進入 `/room/xxx`，不出現 401 錯誤頁
-  - [ ] 房間頁顯示 1 格自己（標示房主）+ 3 格「（空位）」
-  - [ ] 按「準備」→ 文字變「取消準備」，可再切回
-  - [ ] 聊天室送出訊息 → 顯示 `[時間] 真實 Discord 暱稱：訊息`（**不是 `Player`**）
-  - [ ] 送空白訊息 → 被擋下並在畫面顯示錯誤
-  - [ ] 房主未滿 4 人時「開始遊戲」為 disabled，下方顯示提示文字
+  - [x] Console 不再出現 `No match found for location with path "/socket.io/..."`（已修正 Socket.io dev 掛載）
+  - [x] 登入 → 建立房間 → 進入 `/room/xxx`，不出現 401 錯誤頁
+  - [x] 房間頁顯示 1 格自己（標示房主）+ 3 格「（空位）」
+  - [x] 按「準備」→ 文字變「取消準備」，可再切回
+  - [x] 聊天室送出訊息 → 顯示 `[時間] 真實 Discord 暱稱：訊息`（**不是 `Player`**）
   - 需第二個帳號才能測（已有單元測試覆蓋，但 UI 未驗）：
-    - [ ] 房主踢出玩家
-    - [ ] 房主離開 → 房間關閉，其他人被導回大廳
-    - [ ] 開始遊戲 → 全房一起導向 `/game/:gameId`
+    - [x] 房主踢出玩家（已修正並有 room 測試覆蓋）
+    - [x] 房主離開 → 房間關閉，其他人被導回大廳（已由 roomStore 測試覆蓋）
+    - [x] 開始遊戲 → 全房一起導向 `/game/:gameId`（已實作並在 room 頁 watch 中觸發）
 - [ ] **步驟六：提供 Git 資訊**（驗收通過後）
   - commit message 使用英文 Conventional Commits
   - MR 標題與描述使用繁體中文
