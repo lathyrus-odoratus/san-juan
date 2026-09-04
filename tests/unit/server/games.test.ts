@@ -42,7 +42,10 @@ describe('gameStore', () => {
       round: 1,
       governorPlayerId: room.hostPlayerId,
       activePlayerId: room.hostPlayerId,
-      selectedRole: null
+      actionPlayerId: null,
+      selectedRole: null,
+      selectedRoles: [],
+      completedPlayerIds: []
     }))
     expect(snapshot.players.map(gamePlayer => gamePlayer.profile.discordId)).toEqual([
       'host',
@@ -50,6 +53,18 @@ describe('gameStore', () => {
       'p2',
       'p3'
     ])
+    expect(snapshot.players.every(gamePlayer => gamePlayer.hand.length === 4)).toBe(true)
+    expect(snapshot.players.every(gamePlayer => gamePlayer.buildings.length === 1)).toBe(true)
+    expect(snapshot.players.every(gamePlayer => gamePlayer.buildings[0] === 'indigo_plant')).toBe(true)
+    expect(snapshot.deckState).toHaveLength(120)
+    expect(snapshot.discardState).toEqual([])
+  })
+
+  it('requires a full four-player room before creating a game snapshot', () => {
+    const host = player('host')
+    const room = createRoomForPlayer(host, { visibility: 'public' })
+
+    expect(() => createGameForRoom(room)).toThrow('GAME_REQUIRES_FOUR_PLAYERS')
   })
 
   it('returns state, result, and log for game players', () => {

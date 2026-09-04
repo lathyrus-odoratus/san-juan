@@ -32,11 +32,19 @@ export interface PlayerState {
   goods: Record<string, string | null>
 }
 
+export interface SelectedRole {
+  role: Role
+  playerId: string
+}
+
 export interface TurnState {
   round: number
   governorPlayerId: string
   activePlayerId: string
+  actionPlayerId: string | null
   selectedRole: Role | null
+  selectedRoles: SelectedRole[]
+  completedPlayerIds: string[]
 }
 
 /**
