@@ -130,7 +130,7 @@ describe('gameSocketServer room events', () => {
     })
   })
 
-  it('resolves skip action and prompts the next role selector', () => {
+  it('resolves skip action and prompts the next role action player', () => {
     const room = createStartedRoom()
     const snapshot = createGameForRoom(room)
     resolveSelectRole(player('host'), snapshot.gameId, 'Builder')
@@ -140,11 +140,11 @@ describe('gameSocketServer room events', () => {
       gameId: snapshot.gameId,
       playerId: 'host',
       snapshot: expect.objectContaining({
-        phase: 'ROUND_ROLE_SELECTION',
+        phase: 'ROUND_ACTION_RESOLUTION',
         turnState: expect.objectContaining({
           activePlayerId: 'p1',
-          selectedRole: null,
-          actionPlayerId: null
+          selectedRole: 'Builder',
+          actionPlayerId: 'p1'
         })
       })
     })

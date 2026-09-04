@@ -45,7 +45,9 @@ describe('gameStore', () => {
       actionPlayerId: null,
       selectedRole: null,
       selectedRoles: [],
-      completedPlayerIds: []
+      completedPlayerIds: [],
+      priceCard: null,
+      pendingTrades: []
     }))
     expect(snapshot.players.map(gamePlayer => gamePlayer.profile.discordId)).toEqual([
       'host',

@@ -159,7 +159,9 @@ function createDemoSnapshot(id: string): GameSnapshot {
       actionPlayerId: null,
       selectedRole: null,
       selectedRoles: [{ role: 'Builder', playerId: 'player-left' }],
-      completedPlayerIds: []
+      completedPlayerIds: [],
+      priceCard: null,
+      pendingTrades: []
     },
     phase: 'ROUND_ROLE_SELECTION',
     winner: null,

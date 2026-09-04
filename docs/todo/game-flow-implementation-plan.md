@@ -141,46 +141,46 @@
 
 ### 目標
 
-- [ ] 讓五個職業的 engine 行動實際改變遊戲狀態。
+- [x] 讓五個職業的 engine 行動實際改變遊戲狀態。
 
 ### 實作項目
 
-- [ ] 實作 `PROSPECT`。
-- [ ] 實作 `PRODUCE`。
-- [ ] 實作 `BUILD`。
-- [ ] 實作 `TRADE`。
-- [ ] 實作 `COUNCIL`。
-- [ ] 實作 `DISCARD`。
-- [ ] 每個 action 都補上 `canDispatch`。
-- [ ] `Producer`：有貨工廠不可再生產。
-- [ ] `Producer`：一般玩家可生產 1 個 goods。
-- [ ] `Producer`：特權玩家可生產 2 個 goods。
-- [ ] `Builder`：一般玩家照 cost 支付。
-- [ ] `Builder`：特權玩家 cost 減 1。
-- [ ] `Builder`：城市建築不可重複。
-- [ ] `Trader`：翻 Price Card。
-- [ ] `Trader`：一般玩家可賣 1 個 goods。
-- [ ] `Trader`：特權玩家可賣 2 個 goods。
-- [ ] `Trader`：全員完成後一次結算。
-- [ ] `Councillor`：一般玩家抽 2 留 1。
-- [ ] `Councillor`：特權玩家抽 5 留 1。
-- [ ] `Prospector`：特權玩家抽 1 張手牌。
-- [ ] 回合結束時檢查手牌上限。
-- [ ] 回合結束時移交 Governor。
-- [ ] 回合結束後進入下一回合。
+- [x] 實作 `PROSPECT`。
+- [x] 實作 `PRODUCE`。
+- [x] 實作 `BUILD`。
+- [x] 實作 `TRADE`。
+- [x] 實作 `COUNCIL`。
+- [x] 實作 `DISCARD`。
+- [x] 每個 action 都補上 `canDispatch`。
+- [x] `Producer`：有貨工廠不可再生產。
+- [x] `Producer`：一般玩家可生產 1 個 goods。
+- [x] `Producer`：特權玩家可生產 2 個 goods。
+- [x] `Builder`：一般玩家照 cost 支付。
+- [x] `Builder`：特權玩家 cost 減 1。
+- [x] `Builder`：城市建築不可重複。
+- [x] `Trader`：翻 Price Card。
+- [x] `Trader`：一般玩家可賣 1 個 goods。
+- [x] `Trader`：特權玩家可賣 2 個 goods。
+- [x] `Trader`：全員完成後一次結算。
+- [x] `Councillor`：一般玩家抽 2 留 1。
+- [x] `Councillor`：特權玩家抽 5 留 1。
+- [x] `Prospector`：特權玩家抽 1 張手牌。
+- [x] 回合結束時檢查手牌上限。
+- [x] 回合結束時移交 Governor。
+- [x] 回合結束後進入下一回合。
 
 ### 測試項目
 
-- [ ] 新增 `tests/unit/engine/roles/producer.test.ts`。
-- [ ] 新增 `tests/unit/engine/roles/builder.test.ts`。
-- [ ] 新增 `tests/unit/engine/roles/trader.test.ts`。
-- [ ] 新增 `tests/unit/engine/roles/councillor.test.ts`。
-- [ ] 新增 `tests/unit/engine/roles/prospector.test.ts`。
-- [ ] 每個 `GameAction` 至少有一個正常路徑測試。
-- [ ] 每個 `GameAction` 至少有一個非法路徑測試。
-- [ ] 測試 `Trader` 全員完成後才結算。
-- [ ] 測試回合結束後 Governor 正確移交。
-- [ ] 測試 hand limit discard 流程。
+- [x] 新增 `tests/unit/engine/roles/producer.test.ts`。
+- [x] 新增 `tests/unit/engine/roles/builder.test.ts`。
+- [x] 新增 `tests/unit/engine/roles/trader.test.ts`。
+- [x] 新增 `tests/unit/engine/roles/councillor.test.ts`。
+- [x] 新增 `tests/unit/engine/roles/prospector.test.ts`。
+- [x] 每個 `GameAction` 至少有一個正常路徑測試。
+- [x] 每個 `GameAction` 至少有一個非法路徑測試。
+- [x] 測試 `Trader` 全員完成後才結算。
+- [x] 測試回合結束後 Governor 正確移交。
+- [x] 測試 hand limit discard 流程。
 
 ## 分支 6：`feat/game-end-scoring-persistence`
 

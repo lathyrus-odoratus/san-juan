@@ -32,7 +32,11 @@ function cloneSnapshot(snapshot: GameSnapshot): GameSnapshot {
     turnState: {
       ...snapshot.turnState,
       selectedRoles: snapshot.turnState.selectedRoles.map(selectedRole => ({ ...selectedRole })),
-      completedPlayerIds: [...snapshot.turnState.completedPlayerIds]
+      completedPlayerIds: [...snapshot.turnState.completedPlayerIds],
+      pendingTrades: snapshot.turnState.pendingTrades.map(trade => ({
+        playerId: trade.playerId,
+        buildingIds: [...trade.buildingIds]
+      }))
     }
   }
 }
