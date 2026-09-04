@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { PlayerProfile } from '~~/types/player'
-import { resolveJoinRoom, resolveSendMessage } from '~~/server/utils/gameSocketServer'
-import { clearRoomStoreForTest, createRoomForPlayer } from '~~/server/utils/roomStore'
+import { resolveJoinRoom, resolveSelectRole, resolveSendMessage, resolveSkipAction } from '~~/server/utils/gameSocketServer'
+import { clearGameStoreForTest, createGameForRoom } from '~~/server/utils/gameStore'
+import { clearRoomStoreForTest, createRoomForPlayer, joinRoom, setPlayerReady, startRoom } from '~~/server/utils/roomStore'
 
 function player(discordId: string): PlayerProfile {
   return {
@@ -13,6 +14,7 @@ function player(discordId: string): PlayerProfile {
 
 describe('gameSocketServer room events', () => {
   beforeEach(() => {
+    clearGameStoreForTest()
     clearRoomStoreForTest()
   })
 
@@ -95,4 +97,69 @@ describe('gameSocketServer room events', () => {
       }
     })
   })
+
+  it('resolves role selection into role_selected payload and updated snapshot', () => {
+    const room = createStartedRoom()
+    const snapshot = createGameForRoom(room)
+
+    expect(resolveSelectRole(player('host'), snapshot.gameId, 'Builder')).toEqual({
+      type: 'role_selected',
+      gameId: snapshot.gameId,
+      playerId: 'host',
+      role: 'Builder',
+      snapshot: expect.objectContaining({
+        phase: 'ROUND_ACTION_RESOLUTION',
+        turnState: expect.objectContaining({
+          selectedRole: 'Builder',
+          actionPlayerId: 'host'
+        })
+      })
+    })
+  })
+
+  it('rejects illegal role selection with ILLEGAL_ACTION', () => {
+    const room = createStartedRoom()
+    const snapshot = createGameForRoom(room)
+
+    expect(resolveSelectRole(player('p1'), snapshot.gameId, 'Builder')).toEqual({
+      type: 'error',
+      error: {
+        code: 'ILLEGAL_ACTION',
+        message: 'This game action is not allowed in the current state.'
+      }
+    })
+  })
+
+  it('resolves skip action and prompts the next role selector', () => {
+    const room = createStartedRoom()
+    const snapshot = createGameForRoom(room)
+    resolveSelectRole(player('host'), snapshot.gameId, 'Builder')
+
+    expect(resolveSkipAction(player('host'), snapshot.gameId)).toEqual({
+      type: 'action_skipped',
+      gameId: snapshot.gameId,
+      playerId: 'host',
+      snapshot: expect.objectContaining({
+        phase: 'ROUND_ROLE_SELECTION',
+        turnState: expect.objectContaining({
+          activePlayerId: 'p1',
+          selectedRole: null,
+          actionPlayerId: null
+        })
+      })
+    })
+  })
 })
+
+function createStartedRoom(): ReturnType<typeof startRoom> {
+  const host = player('host')
+  const room = createRoomForPlayer(host, { visibility: 'public' })
+  const players = [player('p1'), player('p2'), player('p3')]
+
+  for (const roomPlayer of players) {
+    joinRoom(room.roomId, roomPlayer)
+    setPlayerReady(room.roomId, roomPlayer, { isReady: true })
+  }
+
+  return startRoom(room.roomId, host)
+}

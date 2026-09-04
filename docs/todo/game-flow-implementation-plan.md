@@ -45,30 +45,30 @@
 
 ### 目標
 
-- [ ] 完成一回合內的職業選擇流程。
+- [x] 完成一回合內的職業選擇流程。
 
 ### 實作項目
 
-- [ ] 實作 `SELECT_ROLE`。
-- [ ] 已選職業不可再選。
-- [ ] 依 Governor 起順時鐘決定選職業順序。
-- [ ] 每位玩家選完後推進 active player。
-- [ ] 選完職業後進入該職業的 `ROUND_ACTION_RESOLUTION`。
-- [ ] 若本回合所有職業選擇完成，進入 `ROUND_END_CHECK`。
-- [ ] 擴充 Socket event type：`client:select_role`。
-- [ ] 擴充 Socket event type：`server:role_selection_start`。
-- [ ] 擴充 Socket event type：`server:role_selected`。
-- [ ] 擴充 Socket event type：`server:action_prompt`。
-- [ ] 擴充 Socket event type：`server:error`。
+- [x] 實作 `SELECT_ROLE`。
+- [x] 已選職業不可再選。
+- [x] 依 Governor 起順時鐘決定選職業順序。
+- [x] 每位玩家選完後推進 active player。
+- [x] 選完職業後進入該職業的 `ROUND_ACTION_RESOLUTION`。
+- [x] 若本回合所有職業選擇完成，進入 `ROUND_END_CHECK`。
+- [x] 擴充 Socket event type：`client:select_role`。
+- [x] 擴充 Socket event type：`server:role_selection_start`。
+- [x] 擴充 Socket event type：`server:role_selected`。
+- [x] 擴充 Socket event type：`server:action_prompt`。
+- [x] 擴充 Socket event type：`server:error`。
 
 ### 測試項目
 
-- [ ] 新增 `tests/unit/engine/roles/role-selection.test.ts`。
-- [ ] 測試 Governor 選職業後輪到下一位。
-- [ ] 測試非 active player 不可選職業。
-- [ ] 測試已被選的職業不可再選。
-- [ ] 測試所有玩家都選過後進入回合結束檢查。
-- [ ] 補 Socket `ILLEGAL_ACTION` 測試。
+- [x] 新增 `tests/unit/engine/roles/role-selection.test.ts`。
+- [x] 測試 Governor 選職業後輪到下一位。
+- [x] 測試非 active player 不可選職業。
+- [x] 測試已被選的職業不可再選。
+- [x] 測試所有玩家都選過後進入回合結束檢查。
+- [x] 補 Socket `ILLEGAL_ACTION` 測試。
 
 ## 分支 3：`feat/game-table-ui-shell`
 

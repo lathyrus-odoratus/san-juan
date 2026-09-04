@@ -19,14 +19,11 @@ export function useGameEngine(): GameEngine {
         throw new Error('GAME_NOT_INITIALIZED')
       }
 
-      if (!this.canDispatch(action, snapshot)) {
-        throw new Error('ILLEGAL_ACTION')
-      }
-
-      throw new Error(`UNIMPLEMENTED_ACTION:${action.type}`)
+      snapshot = dispatchGameAction(snapshot, action)
+      return cloneSnapshot(snapshot)
     },
-    canDispatch(_action: GameAction, state: GameSnapshot): boolean {
-      return state.phase !== 'GAME_END'
+    canDispatch(action: GameAction, state: GameSnapshot): boolean {
+      return canDispatchGameAction(state, action)
     }
   }
 }
@@ -48,6 +45,46 @@ interface RulesConfig {
 const buildings = buildingsData as BuildingsFile
 const rules = rulesConfig as RulesConfig
 const STARTING_BUILDING_ID = 'indigo_plant'
+
+export function dispatchGameAction(state: GameSnapshot, action: GameAction): GameSnapshot {
+  if (!canDispatchGameAction(state, action)) {
+    throw new Error('ILLEGAL_ACTION')
+  }
+
+  if (action.type === 'SELECT_ROLE') {
+    return selectRole(state, action)
+  }
+
+  if (action.type === 'SKIP_ACTION') {
+    return completeRoleAction(state, action.playerId)
+  }
+
+  throw new Error(`UNIMPLEMENTED_ACTION:${action.type}`)
+}
+
+export function canDispatchGameAction(state: GameSnapshot, action: GameAction): boolean {
+  if (state.phase === 'GAME_END') {
+    return false
+  }
+
+  if (!hasPlayer(state, action.playerId)) {
+    return false
+  }
+
+  if (action.type === 'SELECT_ROLE') {
+    return state.phase === 'ROUND_ROLE_SELECTION'
+      && state.turnState.activePlayerId === action.playerId
+      && !state.turnState.selectedRoles.some(selectedRole => selectedRole.role === action.role)
+  }
+
+  if (action.type === 'SKIP_ACTION') {
+    return state.phase === 'ROUND_ACTION_RESOLUTION'
+      && state.turnState.actionPlayerId === action.playerId
+      && state.turnState.selectedRole !== null
+  }
+
+  return false
+}
 
 function createInitialGame(seed: string, players: PlayerProfile[]): GameSnapshot {
   if (players.length !== rules.playerCount) {
@@ -88,6 +125,66 @@ function createInitialGame(seed: string, players: PlayerProfile[]): GameSnapshot
     winner: null,
     updatedAt: 0
   }
+}
+
+function selectRole(state: GameSnapshot, action: Extract<GameAction, { type: 'SELECT_ROLE' }>): GameSnapshot {
+  const nextState = cloneSnapshot(state)
+  nextState.phase = 'ROUND_ACTION_RESOLUTION'
+  nextState.turnState.selectedRole = action.role
+  nextState.turnState.selectedRoles = [
+    ...nextState.turnState.selectedRoles,
+    {
+      role: action.role,
+      playerId: action.playerId
+    }
+  ]
+  nextState.turnState.actionPlayerId = action.playerId
+  nextState.turnState.completedPlayerIds = []
+  nextState.updatedAt = state.updatedAt + 1
+  return nextState
+}
+
+function completeRoleAction(state: GameSnapshot, playerId: string): GameSnapshot {
+  const nextState = cloneSnapshot(state)
+  const completedPlayerIds = new Set(nextState.turnState.completedPlayerIds)
+  completedPlayerIds.add(playerId)
+  nextState.turnState.completedPlayerIds = [...completedPlayerIds]
+  nextState.turnState.selectedRole = null
+  nextState.turnState.actionPlayerId = null
+
+  if (nextState.turnState.selectedRoles.length >= nextState.players.length) {
+    nextState.phase = 'ROUND_END_CHECK'
+    nextState.turnState.activePlayerId = nextState.turnState.governorPlayerId
+  }
+  else {
+    nextState.phase = 'ROUND_ROLE_SELECTION'
+    nextState.turnState.activePlayerId = getNextRoleSelectorPlayerId(nextState)
+  }
+
+  nextState.updatedAt = state.updatedAt + 1
+  return nextState
+}
+
+function getNextRoleSelectorPlayerId(state: GameSnapshot): string {
+  const playerIds = state.players.map(player => player.profile.discordId)
+  const governorIndex = playerIds.indexOf(state.turnState.governorPlayerId)
+  if (governorIndex === -1) {
+    throw new Error('GOVERNOR_NOT_FOUND')
+  }
+
+  const selectedPlayerIds = new Set(state.turnState.selectedRoles.map(selectedRole => selectedRole.playerId))
+  for (let offset = 0; offset < playerIds.length; offset += 1) {
+    const playerId = playerIds[(governorIndex + offset) % playerIds.length]
+    if (playerId && !selectedPlayerIds.has(playerId)) {
+      return playerId
+    }
+  }
+
+  return state.turnState.governorPlayerId
+}
+
+function hasPlayer(state: GameSnapshot, playerId: string): boolean {
+  return state.players.some(player => player.profile.discordId === playerId)
 }
 
 function createDeck(): string[] {

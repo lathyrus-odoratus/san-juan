@@ -1,7 +1,7 @@
-import type { GameLogEntry, GameResult, GameSnapshot } from '~~/types/game'
+import type { GameAction, GameLogEntry, GameResult, GameSnapshot } from '~~/types/game'
 import type { Room } from '~~/types/room'
 import type { PlayerProfile } from '~~/types/player'
-import { useGameEngine } from '~~/app/composables/useGameEngine'
+import { dispatchGameAction, useGameEngine } from '~~/app/composables/useGameEngine'
 
 interface GameRecord {
   snapshot: GameSnapshot
@@ -121,10 +121,63 @@ export function getGameResult(gameId: string, player: PlayerProfile): GameResult
   }
 }
 
+export function dispatchGameActionForPlayer(gameId: string, player: PlayerProfile, action: GameAction): GameSnapshot {
+  const record = requireGameRecord(gameId)
+  assertGameAccess(record.snapshot, player)
+
+  if (action.playerId !== player.discordId) {
+    throw createError({ statusCode: 403, statusMessage: 'GAME_ACTION_PLAYER_MISMATCH' })
+  }
+
+  try {
+    const snapshot = dispatchGameAction(record.snapshot, action)
+    record.snapshot = {
+      ...snapshot,
+      gameId: record.snapshot.gameId,
+      roomId: record.snapshot.roomId,
+      hostPlayerId: record.snapshot.hostPlayerId,
+      updatedAt: now()
+    }
+    record.log.push(createActionLogEntry(record.snapshot, action))
+    games.set(gameId, record)
+    return cloneSnapshot(record.snapshot)
+  }
+  catch (error) {
+    if (error instanceof Error && error.message === 'ILLEGAL_ACTION') {
+      throw createError({ statusCode: 409, statusMessage: 'ILLEGAL_ACTION' })
+    }
+
+    throw error
+  }
+}
+
 export function assertGameAccess(snapshot: GameSnapshot, player: PlayerProfile): void {
   if (!snapshot.players.some(gamePlayer => gamePlayer.profile.discordId === player.discordId)) {
     throw createError({ statusCode: 403, statusMessage: 'GAME_ACCESS_DENIED' })
   }
+}
+
+function createActionLogEntry(snapshot: GameSnapshot, action: GameAction): GameLogEntry {
+  return {
+    id: createId('log'),
+    gameId: snapshot.gameId,
+    type: action.type,
+    message: createActionLogMessage(action),
+    createdAt: snapshot.updatedAt,
+    payload: { ...action }
+  }
+}
+
+function createActionLogMessage(action: GameAction): string {
+  if (action.type === 'SELECT_ROLE') {
+    return `${action.playerId} selected ${action.role}.`
+  }
+
+  if (action.type === 'SKIP_ACTION') {
+    return `${action.playerId} skipped the current role action.`
+  }
+
+  return `${action.playerId} performed ${action.type}.`
 }
 
 export function clearGameStoreForTest(): void {
