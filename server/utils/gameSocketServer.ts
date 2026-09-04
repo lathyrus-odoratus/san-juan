@@ -1,10 +1,12 @@
 import type { Server } from 'socket.io'
 import type { ChatMessage, ClientToServerEvents, ServerError, ServerToClientEvents } from '~~/types/events'
+import type { GameSnapshot, Role } from '~~/types/game'
 import type { PlayerProfile } from '~~/types/player'
 import { getAuthSessionFromRequest } from '~~/server/utils/authSession'
 import { getRoom } from '~~/server/utils/roomStore'
 import { emitChatMessage, onRoomSocketEvent } from '~~/server/utils/roomSocketEvents'
 import type { Room } from '~~/types/room'
+import { dispatchGameActionForPlayer } from '~~/server/utils/gameStore'
 
 export type GameIoServer = Server<ClientToServerEvents, ServerToClientEvents>
 
@@ -18,6 +20,14 @@ export type JoinRoomResult =
 
 export type SendMessageResult =
   | { type: 'chat_message'; roomId: string; message: ChatMessage }
+  | { type: 'error'; error: ServerError }
+
+export type SelectRoleResult =
+  | { type: 'role_selected'; gameId: string; playerId: string; role: Role; snapshot: GameSnapshot }
+  | { type: 'error'; error: ServerError }
+
+export type SkipActionResult =
+  | { type: 'action_skipped'; gameId: string; playerId: string; snapshot: GameSnapshot }
   | { type: 'error'; error: ServerError }
 
 export function resolveJoinRoom(roomId: string): JoinRoomResult {
@@ -98,6 +108,118 @@ export function resolveSendMessage(
   }
 }
 
+export function resolveSelectRole(
+  sender: PlayerProfile | null,
+  gameId: string,
+  role: Role
+): SelectRoleResult {
+  if (!sender) {
+    return {
+      type: 'error',
+      error: {
+        code: 'AUTH_ERROR',
+        message: 'Discord login is required to select a role.'
+      }
+    }
+  }
+
+  try {
+    const snapshot = dispatchGameActionForPlayer(gameId, sender, {
+      type: 'SELECT_ROLE',
+      playerId: sender.discordId,
+      role
+    })
+
+    return {
+      type: 'role_selected',
+      gameId,
+      playerId: sender.discordId,
+      role,
+      snapshot
+    }
+  }
+  catch (error) {
+    return {
+      type: 'error',
+      error: resolveGameActionError(error)
+    }
+  }
+}
+
+export function resolveSkipAction(
+  sender: PlayerProfile | null,
+  gameId: string
+): SkipActionResult {
+  if (!sender) {
+    return {
+      type: 'error',
+      error: {
+        code: 'AUTH_ERROR',
+        message: 'Discord login is required to skip an action.'
+      }
+    }
+  }
+
+  try {
+    const snapshot = dispatchGameActionForPlayer(gameId, sender, {
+      type: 'SKIP_ACTION',
+      playerId: sender.discordId
+    })
+
+    return {
+      type: 'action_skipped',
+      gameId,
+      playerId: sender.discordId,
+      snapshot
+    }
+  }
+  catch (error) {
+    return {
+      type: 'error',
+      error: resolveGameActionError(error)
+    }
+  }
+}
+
+function resolveGameActionError(error: unknown): ServerError {
+  if (typeof error === 'object' && error !== null && 'statusMessage' in error) {
+    const { statusMessage } = error as { statusMessage?: string }
+
+    if (statusMessage === 'ILLEGAL_ACTION') {
+      return {
+        code: 'ILLEGAL_ACTION',
+        message: 'This game action is not allowed in the current state.'
+      }
+    }
+
+    if (statusMessage === 'GAME_ACCESS_DENIED') {
+      return {
+        code: 'GAME_ACCESS_DENIED',
+        message: 'Only players in this game can perform actions.'
+      }
+    }
+
+    if (statusMessage === 'GAME_ACTION_PLAYER_MISMATCH') {
+      return {
+        code: 'ILLEGAL_ACTION',
+        message: 'Players can only perform their own game actions.'
+      }
+    }
+
+    if (statusMessage === 'GAME_NOT_FOUND') {
+      return {
+        code: 'GAME_NOT_FOUND',
+        message: 'Game does not exist or has been closed.'
+      }
+    }
+  }
+
+  return {
+    code: 'GAME_ACTION_FAILED',
+    message: 'Game action failed.'
+  }
+}
+
 export function setupGameSocketServer(io: GameIoServer): GameSocketServer {
   const gameNamespace = io.of('/game')
 
@@ -149,6 +271,48 @@ export function setupGameSocketServer(io: GameIoServer): GameSocketServer {
 
       socket.join(result.roomId)
       emitChatMessage(result.roomId, result.message)
+    })
+
+    socket.on('client:select_role', async (payload) => {
+      const result = resolveSelectRole(await senderPromise, payload.gameId, payload.role)
+      if (result.type === 'error') {
+        socket.emit('server:error', result.error)
+        return
+      }
+
+      socket.join(result.snapshot.roomId)
+      gameNamespace.to(result.snapshot.roomId).emit('server:role_selected', {
+        gameId: result.gameId,
+        playerId: result.playerId,
+        role: result.role
+      })
+      gameNamespace.to(result.snapshot.roomId).emit('server:game_state_updated', result.snapshot)
+
+      if (result.snapshot.turnState.actionPlayerId && result.snapshot.turnState.selectedRole) {
+        gameNamespace.to(result.snapshot.roomId).emit('server:action_prompt', {
+          gameId: result.gameId,
+          playerId: result.snapshot.turnState.actionPlayerId,
+          role: result.snapshot.turnState.selectedRole
+        })
+      }
+    })
+
+    socket.on('client:skip_action', async (payload) => {
+      const result = resolveSkipAction(await senderPromise, payload.gameId)
+      if (result.type === 'error') {
+        socket.emit('server:error', result.error)
+        return
+      }
+
+      socket.join(result.snapshot.roomId)
+      gameNamespace.to(result.snapshot.roomId).emit('server:game_state_updated', result.snapshot)
+
+      if (result.snapshot.phase === 'ROUND_ROLE_SELECTION') {
+        gameNamespace.to(result.snapshot.roomId).emit('server:role_selection_start', {
+          gameId: result.gameId,
+          playerId: result.snapshot.turnState.activePlayerId
+        })
+      }
     })
   })
 

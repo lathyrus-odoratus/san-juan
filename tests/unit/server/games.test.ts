@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { PlayerProfile } from '~~/types/player'
-import { clearGameStoreForTest, createGameForRoom, getGameLog, getGameResult, getGameState } from '~~/server/utils/gameStore'
+import { clearGameStoreForTest, createGameForRoom, dispatchGameActionForPlayer, getGameLog, getGameResult, getGameState } from '~~/server/utils/gameStore'
 import { clearRoomStoreForTest, createRoomForPlayer, joinRoom, setPlayerReady, startRoom, assignRoomGame } from '~~/server/utils/roomStore'
 import { startGameForRoom } from '~~/server/utils/gameLifecycle'
 
@@ -133,5 +133,36 @@ describe('gameStore', () => {
 
   it('returns GAME_NOT_FOUND for missing games', () => {
     expect(() => getGameState('missing-game', player('host'))).toThrow('GAME_NOT_FOUND')
+  })
+
+  it('dispatches role selection actions and appends game log entries', () => {
+    const room = createStartedRoom()
+    const snapshot = createGameForRoom(room)
+    const nextSnapshot = dispatchGameActionForPlayer(snapshot.gameId, player('host'), {
+      type: 'SELECT_ROLE',
+      playerId: 'host',
+      role: 'Builder'
+    })
+
+    expect(nextSnapshot.phase).toBe('ROUND_ACTION_RESOLUTION')
+    expect(nextSnapshot.turnState.selectedRole).toBe('Builder')
+    expect(getGameLog(snapshot.gameId, player('host'))).toEqual([
+      expect.objectContaining({ type: 'GAME_CREATED' }),
+      expect.objectContaining({
+        type: 'SELECT_ROLE',
+        message: 'host selected Builder.'
+      })
+    ])
+  })
+
+  it('blocks game actions for a different player id', () => {
+    const room = createStartedRoom()
+    const snapshot = createGameForRoom(room)
+
+    expect(() => dispatchGameActionForPlayer(snapshot.gameId, player('host'), {
+      type: 'SELECT_ROLE',
+      playerId: 'p1',
+      role: 'Builder'
+    })).toThrow('GAME_ACTION_PLAYER_MISMATCH')
   })
 })

@@ -92,6 +92,7 @@ export interface GameResult {
  */
 export type GameAction =
   | { type: 'SELECT_ROLE'; playerId: string; role: Role }
+  | { type: 'SKIP_ACTION'; playerId: string }
   | { type: 'BUILD'; playerId: string; cardId: string; payment: string[] }
   | { type: 'PRODUCE'; playerId: string; buildingIds: string[] }
   | { type: 'TRADE'; playerId: string; buildingIds: string[] }
