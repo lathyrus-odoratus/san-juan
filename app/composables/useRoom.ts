@@ -2,6 +2,12 @@ import type { Ref } from 'vue'
 import type { ChatMessage, ServerError } from '~~/types/events'
 import type { Room, RoomVisibility } from '~~/types/room'
 
+export interface RoomSocketClient {
+  connected: boolean
+  connect: () => void
+  emit: (event: 'client:join_room' | 'client:leave_room', payload: { roomId: string }) => void
+}
+
 export interface UseRoomReturn {
   rooms: Ref<Room[]>
   currentRoom: Ref<Room | null>
@@ -16,6 +22,19 @@ export interface UseRoomReturn {
   kickPlayer: (playerId: string) => Promise<Room>
   startRoom: () => Promise<Room>
   sendMessage: (content: string) => void
+}
+
+export function joinSocketRoom(socket: RoomSocketClient, roomId: string): void {
+  if (!socket.connected) {
+    socket.connect()
+  }
+  socket.emit('client:join_room', { roomId })
+}
+
+export function joinCurrentSocketRoom(socket: RoomSocketClient, room: Room | null): void {
+  if (room) {
+    joinSocketRoom(socket, room.roomId)
+  }
 }
 
 /**
@@ -47,10 +66,12 @@ export function useRoom(): UseRoomReturn {
     }
 
     const { $gameSocket } = useNuxtApp()
-    if (!$gameSocket.connected) {
-      $gameSocket.connect()
-    }
-    $gameSocket.emit('client:join_room', { roomId })
+    joinSocketRoom($gameSocket, roomId)
+  }
+
+  function connectCurrentSocketRoom(): void {
+    const { $gameSocket } = useNuxtApp()
+    joinCurrentSocketRoom($gameSocket, currentRoom.value)
   }
 
   if (import.meta.client) {
@@ -89,26 +110,34 @@ export function useRoom(): UseRoomReturn {
         socketErrors.value = [...socketErrors.value, error]
       })
 
-      watch(
-        () => currentRoom.value?.roomId,
-        (roomId, previousRoomId) => {
-          if (previousRoomId) {
-            $gameSocket.emit('client:leave_room', { roomId: previousRoomId })
-          }
-
-          if (roomId !== previousRoomId) {
-            // 聊天訊息與 socket 錯誤都以房間為單位，換房時清空
-            chatMessages.value = []
-            socketErrors.value = []
-          }
-
-          if (roomId) {
-            connectSocketRoom(roomId)
-          }
-        },
-        { immediate: true }
-      )
+      $gameSocket.on('connect', () => {
+        connectCurrentSocketRoom()
+      })
     }
+
+    watch(
+      () => currentRoom.value?.roomId,
+      (roomId, previousRoomId) => {
+        const { $gameSocket } = useNuxtApp()
+
+        if (previousRoomId) {
+          $gameSocket.emit('client:leave_room', { roomId: previousRoomId })
+        }
+
+        if (roomId !== previousRoomId) {
+          // 聊天訊息與 socket 錯誤都以房間為單位，換房時清空
+          chatMessages.value = []
+          socketErrors.value = []
+        }
+
+        if (roomId) {
+          connectSocketRoom(roomId)
+        }
+      },
+      { immediate: true }
+    )
+
+    isSocketBound.value = true
   }
 
   // 房間列表
