@@ -1,5 +1,6 @@
 {
   "name": "san-juan",
+  "version": "0.1.1",
   "type": "module",
   "private": true,
   "scripts": {
@@ -7,6 +8,7 @@
     "dev": "nuxt dev",
     "lint": "eslint .",
     "generate": "nuxt generate",
+    "install:hooks": "node scripts/install-git-hooks.mjs",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "test": "vitest run --passWithNoTests",
