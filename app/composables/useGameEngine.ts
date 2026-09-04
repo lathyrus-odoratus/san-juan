@@ -1,4 +1,4 @@
-import type { GameAction, GameEngine, GameSnapshot, PlayerState, PriceCard } from '~~/types/game'
+import type { GameAction, GameEngine, GameResult, GameResultPlayer, GameSnapshot, PlayerState, PriceCard } from '~~/types/game'
 import type { PlayerProfile } from '~~/types/player'
 import buildingsData from '~~/data/cards.buildings.json'
 import rulesConfig from '~~/data/rules.config.json'
@@ -44,6 +44,8 @@ interface RulesConfig {
   playerCount: number
   initialHandSize: number
   handLimit: number
+  endgameBuildingCount: number
+  monuments: string[]
 }
 
 const buildings = buildingsData as BuildingsFile
@@ -95,6 +97,58 @@ export function dispatchGameAction(state: GameSnapshot, action: GameAction): Gam
   }
 
   return assertNever(action)
+}
+
+export function calculateGameResult(snapshot: GameSnapshot): GameResult {
+  const players = snapshot.players.map((player): GameResultPlayer => ({
+    playerId: player.profile.discordId,
+    username: player.profile.username,
+    score: calculatePlayerScore(player),
+    isWinner: false
+  }))
+  const highestScore = Math.max(...players.map(player => player.score), 0)
+  const tiedPlayers = players.filter(player => player.score === highestScore)
+  const winner = snapshot.phase === 'GAME_END'
+    ? tiedPlayers.length === 1
+      ? tiedPlayers[0]?.playerId ?? null
+      : resolveTie(snapshot, tiedPlayers.map(player => player.playerId))
+    : null
+
+  return {
+    gameId: snapshot.gameId,
+    isGameOver: snapshot.phase === 'GAME_END',
+    winner,
+    players: players.map(player => ({ ...player, isWinner: player.playerId === winner }))
+  }
+}
+
+export function calculatePlayerScore(player: PlayerState): number {
+  const cards = player.buildings.map(getBuildingCard).filter((card): card is BuildingCard => card !== null)
+  const baseScore = cards.reduce((total, card) => total + card.vp, 0)
+  const cityHallBonus = cards.filter(card => card.id === 'city_hall').length
+    * cards.filter(card => card.category === 'city').length
+  const productionCards = cards.filter(card => card.category === 'production')
+  const guildHallBonus = cards.filter(card => card.id === 'guild_hall').length
+    * (productionCards.length + new Set(productionCards.map(card => card.goodType)).size)
+  const palaceBonus = cards.filter(card => card.id === 'palace').length
+    * Math.floor((baseScore - cards.filter(card => card.id === 'palace').reduce((total, card) => total + card.vp, 0)) / 4)
+  const monumentTypes = new Set(cards.filter(card => rules.monuments.includes(card.id)).map(card => card.id)).size
+  const triumphalArchBonus = cards.filter(card => card.id === 'triumphal_arch').length
+    * (monumentTypes === 1 ? 4 : monumentTypes === 2 ? 6 : monumentTypes >= 3 ? 8 : 0)
+
+  return baseScore + cityHallBonus + guildHallBonus + palaceBonus + triumphalArchBonus
+}
+
+function resolveTie(snapshot: GameSnapshot, playerIds: string[]): string | null {
+  return playerIds
+    .map(playerId => {
+      const player = requirePlayer(snapshot, playerId)
+      return {
+        playerId,
+        tieBreaker: player.hand.length + Object.values(player.goods).filter(Boolean).length
+      }
+    })
+    .sort((left, right) => right.tieBreaker - left.tieBreaker)[0]?.playerId ?? null
 }
 
 export function canDispatchGameAction(state: GameSnapshot, action: GameAction): boolean {
@@ -330,6 +384,20 @@ function resolveRoundEnd(state: GameSnapshot, updatedAt: number): GameSnapshot {
     nextState.phase = 'ROUND_END_CHECK'
     nextState.turnState.activePlayerId = playerOverLimit.profile.discordId
     nextState.turnState.actionPlayerId = playerOverLimit.profile.discordId
+    nextState.updatedAt = updatedAt
+    return nextState
+  }
+
+  if (nextState.players.some(player => player.buildings.length >= rules.endgameBuildingCount)) {
+    nextState.phase = 'GAME_END'
+    nextState.turnState.activePlayerId = ''
+    nextState.turnState.actionPlayerId = null
+    nextState.turnState.selectedRole = null
+    nextState.turnState.selectedRoles = []
+    nextState.turnState.completedPlayerIds = []
+    nextState.turnState.priceCard = null
+    nextState.turnState.pendingTrades = []
+    nextState.winner = calculateGameResult({ ...nextState, phase: 'GAME_END' }).winner
     nextState.updatedAt = updatedAt
     return nextState
   }

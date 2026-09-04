@@ -190,31 +190,31 @@
 
 ### 實作項目
 
-- [ ] 實作 12 棟建築終局觸發。
-- [ ] 當前回合結束後進入 `GAME_END`。
-- [ ] 實作基礎 VP 計算。
-- [ ] 實作 `City Hall` 加分。
-- [ ] 實作 `Guild Hall` 加分。
-- [ ] 實作 `Palace` 加分。
-- [ ] 實作 `Triumphal Arch` 加分。
-- [ ] 實作 tie breaker：手牌數 + 生產建築上的 goods 數。
-- [ ] 實作或補齊 `usePersistence`。
-- [ ] 接上 `usePersistence` 儲存 UI settings：玩家資訊顯示模式與建築說明模式。
-- [ ] 儲存 `sj.game.snapshot.v1`。
-- [ ] 儲存 `sj.game.eventlog.v1`。
-- [ ] 實作 migration pipeline。
-- [ ] 實作 corrupted snapshot backup。
-- [ ] 實作 BroadcastChannel 同瀏覽器多分頁同步。
-- [ ] `/api/games/:gameId/result` 回傳實際分數。
+- [x] 實作 12 棟建築終局觸發。
+- [x] 當前回合結束後進入 `GAME_END`。
+- [x] 實作基礎 VP 計算。
+- [x] 實作 `City Hall` 加分。
+- [x] 實作 `Guild Hall` 加分。
+- [x] 實作 `Palace` 加分。
+- [x] 實作 `Triumphal Arch` 加分。
+- [x] 實作 tie breaker：手牌數 + 生產建築上的 goods 數。
+- [x] 實作或補齊 `usePersistence`。
+- [x] 接上 `usePersistence` 儲存 UI settings：玩家資訊顯示模式與建築說明模式。
+- [x] 儲存 `sj.game.snapshot.v1`。
+- [x] 儲存 `sj.game.eventlog.v1`。
+- [x] 實作 migration pipeline。
+- [x] 實作 corrupted snapshot backup。
+- [x] 實作 BroadcastChannel 同瀏覽器多分頁同步。
+- [x] `/api/games/:gameId/result` 回傳實際分數。
 
 ### 測試項目
 
-- [ ] 新增 `tests/unit/engine/scoring.test.ts`。
-- [ ] 新增 `tests/unit/engine/game-end.test.ts`。
-- [ ] 新增 `tests/unit/persistence/migration.test.ts`。
-- [ ] 補 `tests/unit/server/games.test.ts` 實際 result cases。
+- [x] 新增 `tests/unit/engine/scoring.test.ts`。
+- [x] 新增 `tests/unit/engine/game-end.test.ts`。
+- [x] 新增 `tests/unit/persistence/migration.test.ts`。
+- [x] 補 `tests/unit/server/games.test.ts` 實際 result cases。
 - [ ] 新增 `e2e/game-round.spec.ts` 完整一輪 smoke test。
-- [ ] 新增 `e2e/persistence.spec.ts` 頁面刷新後恢復對局。
+- [x] 新增 `e2e/persistence.spec.ts` 頁面刷新後恢復對局。
 
 ## 每個分支完成條件
 

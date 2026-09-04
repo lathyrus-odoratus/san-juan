@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import buildingsData from '~~/data/cards.buildings.json'
 import RoleSelectionModal from '~~/app/components/game/RoleSelectionModal.vue'
-import type { GameSnapshot, PlayerState, Role } from '~~/types/game'
+import type { GameLogEntry, GameSnapshot, PlayerState, Role } from '~~/types/game'
 import type { PlayerProfile } from '~~/types/player'
+import { createDefaultSettings, PERSISTENCE_KEYS, usePersistence, type PlayerSettings } from '~~/app/composables/usePersistence'
 
 // Game table page — board layout, hand, roles, onboarding.
 const route = useRoute()
@@ -29,10 +30,13 @@ const selectedRoleMessage = ref('')
 const playerInfoMode = ref<'hover' | 'always'>('hover')
 const buildingTextMode = ref<'compact' | 'detailed'>('detailed')
 const startedAt = Date.now()
+const persistedSnapshot = ref<GameSnapshot | null>(null)
+const eventLog = ref<GameLogEntry[]>([])
+const persistence = usePersistence()
 
 const buildingCards = (buildingsData as BuildingsFile).cards
 const buildingById = new Map(buildingCards.map(card => [card.id, card]))
-const snapshot = computed<GameSnapshot>(() => createDemoSnapshot(gameId.value))
+const snapshot = computed<GameSnapshot>(() => persistedSnapshot.value ?? createDemoSnapshot(gameId.value))
 const players = computed(() => snapshot.value.players)
 const ownPlayer = computed(() => players.value[0] ?? null)
 const otherPlayers = computed(() => players.value.slice(1))
@@ -72,11 +76,43 @@ function toggleSettings(): void {
 
 function setPlayerInfoMode(mode: 'hover' | 'always'): void {
   playerInfoMode.value = mode
+  saveSettings()
 }
 
 function setBuildingTextMode(mode: 'compact' | 'detailed'): void {
   buildingTextMode.value = mode
+  saveSettings()
 }
+
+function saveSettings(): void {
+  persistence.save<PlayerSettings>(PERSISTENCE_KEYS.settings, {
+    schemaVersion: 1,
+    playerInfoMode: playerInfoMode.value,
+    buildingTextMode: buildingTextMode.value
+  })
+}
+
+function restorePersistedState(): void {
+  const settings = persistence.load<PlayerSettings>(PERSISTENCE_KEYS.settings) ?? createDefaultSettings()
+  playerInfoMode.value = settings.playerInfoMode
+  buildingTextMode.value = settings.buildingTextMode
+
+  const storedSnapshot = persistence.load<GameSnapshot>(PERSISTENCE_KEYS.gameSnapshot)
+  eventLog.value = persistence.load<GameLogEntry[]>(PERSISTENCE_KEYS.gameEventLog) ?? []
+  if (storedSnapshot?.gameId === gameId.value) {
+    persistedSnapshot.value = storedSnapshot
+  }
+  else {
+    persistence.save(PERSISTENCE_KEYS.gameSnapshot, snapshot.value)
+  }
+  persistence.save(PERSISTENCE_KEYS.gameEventLog, eventLog.value)
+}
+
+const unsubscribePersistence = persistence.subscribe(change => {
+  if (change.key !== PERSISTENCE_KEYS.gameSnapshot || !change.value) return
+  const nextSnapshot = change.value as GameSnapshot
+  if (nextSnapshot.gameId === gameId.value) persistedSnapshot.value = nextSnapshot
+})
 
 function hideRoleSelection(): void {
   isRoleSelectionOpen.value = false
@@ -85,7 +121,20 @@ function hideRoleSelection(): void {
 function confirmRoleSelection(role: Role): void {
   selectedRoleMessage.value = `You 選擇了 ${role}`
   isRoleSelectionOpen.value = false
+  persistence.save(PERSISTENCE_KEYS.gameSnapshot, snapshot.value)
+  eventLog.value = [...eventLog.value, {
+    id: `event-${Date.now()}`,
+    gameId: gameId.value,
+    type: 'SELECT_ROLE',
+    message: `You selected ${role}.`,
+    createdAt: Date.now(),
+    payload: { role }
+  }]
+  persistence.save(PERSISTENCE_KEYS.gameEventLog, eventLog.value)
 }
+
+onMounted(restorePersistedState)
+onUnmounted(unsubscribePersistence)
 
 function isGovernor(player: PlayerState | null): boolean {
   return player?.profile.discordId === snapshot.value.turnState.governorPlayerId

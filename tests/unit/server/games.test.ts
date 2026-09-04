@@ -82,7 +82,7 @@ describe('gameStore', () => {
       players: snapshot.players.map(gamePlayer => ({
         playerId: gamePlayer.profile.discordId,
         username: gamePlayer.profile.username,
-        score: 0,
+        score: 1,
         isWinner: false
       }))
     })
