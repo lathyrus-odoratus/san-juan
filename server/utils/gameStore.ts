@@ -1,6 +1,7 @@
 import type { GameLogEntry, GameResult, GameSnapshot } from '~~/types/game'
 import type { Room } from '~~/types/room'
 import type { PlayerProfile } from '~~/types/player'
+import { useGameEngine } from '~~/app/composables/useGameEngine'
 
 interface GameRecord {
   snapshot: GameSnapshot
@@ -28,7 +29,11 @@ function cloneSnapshot(snapshot: GameSnapshot): GameSnapshot {
     })),
     deckState: [...snapshot.deckState],
     discardState: [...snapshot.discardState],
-    turnState: { ...snapshot.turnState }
+    turnState: {
+      ...snapshot.turnState,
+      selectedRoles: snapshot.turnState.selectedRoles.map(selectedRole => ({ ...selectedRole })),
+      completedPlayerIds: [...snapshot.turnState.completedPlayerIds]
+    }
   }
 }
 
@@ -49,45 +54,30 @@ function requireGameRecord(gameId: string): GameRecord {
 }
 
 export function createGameForRoom(room: Room): GameSnapshot {
-  if (room.players.length === 0) {
-    throw createError({ statusCode: 400, statusMessage: 'GAME_REQUIRES_PLAYERS' })
+  if (room.players.length !== room.maxPlayers) {
+    throw createError({ statusCode: 400, statusMessage: 'GAME_REQUIRES_FOUR_PLAYERS' })
   }
 
   const timestamp = now()
-  const gameId = createId('game')
-  const snapshot: GameSnapshot = {
-    schemaVersion: 1,
-    gameId,
-    roomId: room.roomId,
-    hostPlayerId: room.hostPlayerId,
-    players: room.players.map(roomPlayer => ({
-      profile: {
-        discordId: roomPlayer.discordId,
-        username: roomPlayer.username,
-        avatar: roomPlayer.avatar
-      },
-      hand: [],
-      buildings: [],
-      goods: {}
-    })),
-    deckState: [],
-    discardState: [],
-    turnState: {
-      round: 1,
-      governorPlayerId: room.hostPlayerId,
-      activePlayerId: room.hostPlayerId,
-      selectedRole: null
-    },
-    phase: 'ROUND_ROLE_SELECTION',
-    winner: null,
-    updatedAt: timestamp
-  }
+  const engine = useGameEngine()
+  const snapshot = engine.createGame(room.roomId, room.players.map(roomPlayer => ({
+    discordId: roomPlayer.discordId,
+    username: roomPlayer.username,
+    avatar: roomPlayer.avatar
+  })))
 
-  games.set(gameId, {
+  snapshot.gameId = createId('game')
+  snapshot.roomId = room.roomId
+  snapshot.hostPlayerId = room.hostPlayerId
+  snapshot.turnState.governorPlayerId = room.hostPlayerId
+  snapshot.turnState.activePlayerId = room.hostPlayerId
+  snapshot.updatedAt = timestamp
+
+  games.set(snapshot.gameId, {
     snapshot,
     log: [{
       id: createId('log'),
-      gameId,
+      gameId: snapshot.gameId,
       type: 'GAME_CREATED',
       message: 'Game state initialized from room players.',
       createdAt: timestamp,
