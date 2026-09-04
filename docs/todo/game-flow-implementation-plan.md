@@ -74,69 +74,68 @@
 
 ### 目標
 
-- [ ] 把 `/game/[id]` 做成可承載流程的桌面 UI。
+- [x] 把 `/game/[id]` 做成可承載流程的桌面 UI。
 
 ### 實作項目
 
-- [ ] 實作四人桌面布局：上 / 左 / 右 / 下玩家區。
-- [ ] 實作中央公共區：deck、discard、Price Card、phase、round。
-- [ ] 實作左下遊戲指引 / event log。
-- [ ] 實作右下 `i` Drawer。
-- [ ] 玩家區顯示 avatar。
-- [ ] 玩家區顯示 Governor 標示。
-- [ ] 玩家區顯示 active player 高亮。
-- [ ] 玩家區顯示 hand count。
-- [ ] 玩家區顯示 buildings。
-- [ ] 玩家區依工廠分開顯示 goods。
-- [ ] 自己手牌區顯示完整卡片資訊。
-- [ ] 其他玩家只顯示手牌數，不顯示手牌內容。
-- [ ] 設定玩家資訊顯示模式：`hover` / `always`。
-- [ ] 設定建築說明模式：`compact` / `detailed`。
-- [ ] 接上現有或後續 `usePersistence` 設定儲存。
+- [x] 實作四人桌面布局：上 / 左 / 右 / 下玩家區。
+- [x] 實作中央公共區：deck、discard、Price Card、phase、round。
+- [x] 實作左下遊戲指引 / event log。
+- [x] 實作右下 `i` Drawer。
+- [x] 玩家區顯示 avatar。
+- [x] 玩家區顯示 Governor 標示。
+- [x] 玩家區顯示 active player 高亮。
+- [x] 玩家區顯示 hand count。
+- [x] 玩家區顯示 buildings。
+- [x] 玩家區依工廠分開顯示 goods。
+- [x] 自己手牌區顯示完整卡片資訊。
+- [x] 其他玩家只顯示手牌數，不顯示手牌內容。
+- [x] 設定玩家資訊顯示模式：`hover` / `always`。
+- [x] 設定建築說明模式：`compact` / `detailed`。
 
 ### 測試項目
 
-- [ ] 新增 game table Vue component / page 測試。
-- [ ] 測試 phase 正確顯示。
-- [ ] 測試 active player 正確顯示。
-- [ ] 測試 Governor 正確顯示。
-- [ ] 測試其他玩家不顯示手牌內容。
-- [ ] 測試 settings 切換後 UI 狀態正確。
-- [ ] 新增 `e2e/game-table.spec.ts` smoke test。
-- [ ] 測試進入 `/game/[id]` 可看到桌面主要區塊。
+- [x] 新增 game table Vue component / page 測試。
+- [x] 測試 phase 正確顯示。
+- [x] 測試 active player 正確顯示。
+- [x] 測試 Governor 正確顯示。
+- [x] 測試其他玩家不顯示手牌內容。
+- [x] 測試 settings 切換後 UI 狀態正確。
+- [x] 新增 `e2e/game-table.spec.ts` smoke test。
+- [x] 測試進入 `/game/[id]` 可看到桌面主要區塊。
 
 ## 分支 4：`feat/game-action-modals`
 
 ### 目標
 
-- [ ] 完成職業操作需要的共用 UI 元件與前端互動殼。
+- [x] 完成職業操作需要的共用 UI 元件與前端互動殼。
 
 ### 實作項目
 
-- [ ] 實作通用 `CardSelectorModal`。
-- [ ] 實作通用結果確認彈窗。
-- [ ] 實作職業選擇 Modal。
-- [ ] 實作 `Producer` 工廠選擇 Modal。
-- [ ] 實作 `Builder` 兩步驟 Modal。
-- [ ] 實作 `Trader` 售貨 Modal。
-- [ ] 實作 `Councillor` 選牌 Modal。
-- [ ] 實作手牌超上限棄牌 Modal。
-- [ ] Modal 支援 `隱藏` 後保留目前選取狀態。
-- [ ] disabled card 維持可見但不可選。
+- [x] 實作通用 `CardSelectorModal`。
+- [x] 實作通用結果確認彈窗。
+- [x] 實作職業選擇 Modal。
+- [x] 實作 `Producer` 工廠選擇 Modal。
+- [x] 實作 `Builder` 兩步驟 Modal。
+- [x] 實作 `Trader` 售貨 Modal。
+- [x] 實作 `Councillor` 選牌 Modal。
+- [x] 實作手牌超上限棄牌 Modal。
+- [x] Modal 支援 `隱藏` 後保留目前選取狀態。
+- [x] disabled card 維持可見但不可選。
 
 ### 測試項目
 
-- [ ] 測試 card pagination。
-- [ ] 測試 selected 狀態。
-- [ ] 測試 disabled 狀態。
-- [ ] 測試 `Producer` 一般玩家最多選 1 個工廠。
-- [ ] 測試 `Producer` 特權玩家最多選 2 個工廠。
-- [ ] 測試 `Builder` 不可建重複城市建築。
-- [ ] 測試 `Builder` 手牌不足時 card disabled。
-- [ ] 測試 `Councillor` 限選 1 張。
-- [ ] 測試 discard hand limit 選滿才可確認。
-- [ ] E2E 測試職業選擇 Modal 顯示已選玩家 avatar。
-- [ ] E2E 測試已選職業 disabled。
+- [x] 測試 card pagination。
+- [x] 測試 selected 狀態。
+- [x] 測試 disabled 狀態。
+- [x] 測試 `Producer` 一般玩家最多選 1 個工廠。
+- [x] 測試 `Producer` 特權玩家最多選 2 個工廠。
+- [x] 測試 `Builder` 不可建重複城市建築。
+- [x] 測試 `Builder` 手牌不足時 card disabled。
+- [x] 測試 `Councillor` 限選 1 張。
+- [x] 測試 discard hand limit 選滿才可確認。
+- [x] E2E 測試職業選擇 Modal 顯示已選玩家 avatar。
+- [x] E2E 測試已選職業 disabled。
 
 ## 分支 5：`feat/game-role-actions-engine`
 
@@ -200,6 +199,7 @@
 - [ ] 實作 `Triumphal Arch` 加分。
 - [ ] 實作 tie breaker：手牌數 + 生產建築上的 goods 數。
 - [ ] 實作或補齊 `usePersistence`。
+- [ ] 接上 `usePersistence` 儲存 UI settings：玩家資訊顯示模式與建築說明模式。
 - [ ] 儲存 `sj.game.snapshot.v1`。
 - [ ] 儲存 `sj.game.eventlog.v1`。
 - [ ] 實作 migration pipeline。
