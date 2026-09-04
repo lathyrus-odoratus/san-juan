@@ -23,7 +23,9 @@ describe('initial game state machine', () => {
       actionPlayerId: null,
       selectedRole: null,
       selectedRoles: [],
-      completedPlayerIds: []
+      completedPlayerIds: [],
+      priceCard: null,
+      pendingTrades: []
     })
     expect(snapshot.winner).toBeNull()
   })

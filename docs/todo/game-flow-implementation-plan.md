@@ -141,46 +141,46 @@
 
 ### 目標
 
-- [ ] 讓五個職業的 engine 行動實際改變遊戲狀態。
+- [x] 讓五個職業的 engine 行動實際改變遊戲狀態。
 
 ### 實作項目
 
-- [ ] 實作 `PROSPECT`。
-- [ ] 實作 `PRODUCE`。
-- [ ] 實作 `BUILD`。
-- [ ] 實作 `TRADE`。
-- [ ] 實作 `COUNCIL`。
-- [ ] 實作 `DISCARD`。
-- [ ] 每個 action 都補上 `canDispatch`。
-- [ ] `Producer`：有貨工廠不可再生產。
-- [ ] `Producer`：一般玩家可生產 1 個 goods。
-- [ ] `Producer`：特權玩家可生產 2 個 goods。
-- [ ] `Builder`：一般玩家照 cost 支付。
-- [ ] `Builder`：特權玩家 cost 減 1。
-- [ ] `Builder`：城市建築不可重複。
-- [ ] `Trader`：翻 Price Card。
-- [ ] `Trader`：一般玩家可賣 1 個 goods。
-- [ ] `Trader`：特權玩家可賣 2 個 goods。
-- [ ] `Trader`：全員完成後一次結算。
-- [ ] `Councillor`：一般玩家抽 2 留 1。
-- [ ] `Councillor`：特權玩家抽 5 留 1。
-- [ ] `Prospector`：特權玩家抽 1 張手牌。
-- [ ] 回合結束時檢查手牌上限。
-- [ ] 回合結束時移交 Governor。
-- [ ] 回合結束後進入下一回合。
+- [x] 實作 `PROSPECT`。
+- [x] 實作 `PRODUCE`。
+- [x] 實作 `BUILD`。
+- [x] 實作 `TRADE`。
+- [x] 實作 `COUNCIL`。
+- [x] 實作 `DISCARD`。
+- [x] 每個 action 都補上 `canDispatch`。
+- [x] `Producer`：有貨工廠不可再生產。
+- [x] `Producer`：一般玩家可生產 1 個 goods。
+- [x] `Producer`：特權玩家可生產 2 個 goods。
+- [x] `Builder`：一般玩家照 cost 支付。
+- [x] `Builder`：特權玩家 cost 減 1。
+- [x] `Builder`：城市建築不可重複。
+- [x] `Trader`：翻 Price Card。
+- [x] `Trader`：一般玩家可賣 1 個 goods。
+- [x] `Trader`：特權玩家可賣 2 個 goods。
+- [x] `Trader`：全員完成後一次結算。
+- [x] `Councillor`：一般玩家抽 2 留 1。
+- [x] `Councillor`：特權玩家抽 5 留 1。
+- [x] `Prospector`：特權玩家抽 1 張手牌。
+- [x] 回合結束時檢查手牌上限。
+- [x] 回合結束時移交 Governor。
+- [x] 回合結束後進入下一回合。
 
 ### 測試項目
 
-- [ ] 新增 `tests/unit/engine/roles/producer.test.ts`。
-- [ ] 新增 `tests/unit/engine/roles/builder.test.ts`。
-- [ ] 新增 `tests/unit/engine/roles/trader.test.ts`。
-- [ ] 新增 `tests/unit/engine/roles/councillor.test.ts`。
-- [ ] 新增 `tests/unit/engine/roles/prospector.test.ts`。
-- [ ] 每個 `GameAction` 至少有一個正常路徑測試。
-- [ ] 每個 `GameAction` 至少有一個非法路徑測試。
-- [ ] 測試 `Trader` 全員完成後才結算。
-- [ ] 測試回合結束後 Governor 正確移交。
-- [ ] 測試 hand limit discard 流程。
+- [x] 新增 `tests/unit/engine/roles/producer.test.ts`。
+- [x] 新增 `tests/unit/engine/roles/builder.test.ts`。
+- [x] 新增 `tests/unit/engine/roles/trader.test.ts`。
+- [x] 新增 `tests/unit/engine/roles/councillor.test.ts`。
+- [x] 新增 `tests/unit/engine/roles/prospector.test.ts`。
+- [x] 每個 `GameAction` 至少有一個正常路徑測試。
+- [x] 每個 `GameAction` 至少有一個非法路徑測試。
+- [x] 測試 `Trader` 全員完成後才結算。
+- [x] 測試回合結束後 Governor 正確移交。
+- [x] 測試 hand limit discard 流程。
 
 ## 分支 6：`feat/game-end-scoring-persistence`
 
@@ -190,31 +190,31 @@
 
 ### 實作項目
 
-- [ ] 實作 12 棟建築終局觸發。
-- [ ] 當前回合結束後進入 `GAME_END`。
-- [ ] 實作基礎 VP 計算。
-- [ ] 實作 `City Hall` 加分。
-- [ ] 實作 `Guild Hall` 加分。
-- [ ] 實作 `Palace` 加分。
-- [ ] 實作 `Triumphal Arch` 加分。
-- [ ] 實作 tie breaker：手牌數 + 生產建築上的 goods 數。
-- [ ] 實作或補齊 `usePersistence`。
-- [ ] 接上 `usePersistence` 儲存 UI settings：玩家資訊顯示模式與建築說明模式。
-- [ ] 儲存 `sj.game.snapshot.v1`。
-- [ ] 儲存 `sj.game.eventlog.v1`。
-- [ ] 實作 migration pipeline。
-- [ ] 實作 corrupted snapshot backup。
-- [ ] 實作 BroadcastChannel 同瀏覽器多分頁同步。
-- [ ] `/api/games/:gameId/result` 回傳實際分數。
+- [x] 實作 12 棟建築終局觸發。
+- [x] 當前回合結束後進入 `GAME_END`。
+- [x] 實作基礎 VP 計算。
+- [x] 實作 `City Hall` 加分。
+- [x] 實作 `Guild Hall` 加分。
+- [x] 實作 `Palace` 加分。
+- [x] 實作 `Triumphal Arch` 加分。
+- [x] 實作 tie breaker：手牌數 + 生產建築上的 goods 數。
+- [x] 實作或補齊 `usePersistence`。
+- [x] 接上 `usePersistence` 儲存 UI settings：玩家資訊顯示模式與建築說明模式。
+- [x] 儲存 `sj.game.snapshot.v1`。
+- [x] 儲存 `sj.game.eventlog.v1`。
+- [x] 實作 migration pipeline。
+- [x] 實作 corrupted snapshot backup。
+- [x] 實作 BroadcastChannel 同瀏覽器多分頁同步。
+- [x] `/api/games/:gameId/result` 回傳實際分數。
 
 ### 測試項目
 
-- [ ] 新增 `tests/unit/engine/scoring.test.ts`。
-- [ ] 新增 `tests/unit/engine/game-end.test.ts`。
-- [ ] 新增 `tests/unit/persistence/migration.test.ts`。
-- [ ] 補 `tests/unit/server/games.test.ts` 實際 result cases。
+- [x] 新增 `tests/unit/engine/scoring.test.ts`。
+- [x] 新增 `tests/unit/engine/game-end.test.ts`。
+- [x] 新增 `tests/unit/persistence/migration.test.ts`。
+- [x] 補 `tests/unit/server/games.test.ts` 實際 result cases。
 - [ ] 新增 `e2e/game-round.spec.ts` 完整一輪 smoke test。
-- [ ] 新增 `e2e/persistence.spec.ts` 頁面刷新後恢復對局。
+- [x] 新增 `e2e/persistence.spec.ts` 頁面刷新後恢復對局。
 
 ## 每個分支完成條件
 

@@ -45,7 +45,9 @@ describe('gameStore', () => {
       actionPlayerId: null,
       selectedRole: null,
       selectedRoles: [],
-      completedPlayerIds: []
+      completedPlayerIds: [],
+      priceCard: null,
+      pendingTrades: []
     }))
     expect(snapshot.players.map(gamePlayer => gamePlayer.profile.discordId)).toEqual([
       'host',
@@ -80,7 +82,7 @@ describe('gameStore', () => {
       players: snapshot.players.map(gamePlayer => ({
         playerId: gamePlayer.profile.discordId,
         username: gamePlayer.profile.username,
-        score: 0,
+        score: 1,
         isWinner: false
       }))
     })

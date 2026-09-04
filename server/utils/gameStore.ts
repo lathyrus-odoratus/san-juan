@@ -1,7 +1,7 @@
 import type { GameAction, GameLogEntry, GameResult, GameSnapshot } from '~~/types/game'
 import type { Room } from '~~/types/room'
 import type { PlayerProfile } from '~~/types/player'
-import { dispatchGameAction, useGameEngine } from '~~/app/composables/useGameEngine'
+import { calculateGameResult, dispatchGameAction, useGameEngine } from '~~/app/composables/useGameEngine'
 
 interface GameRecord {
   snapshot: GameSnapshot
@@ -32,7 +32,11 @@ function cloneSnapshot(snapshot: GameSnapshot): GameSnapshot {
     turnState: {
       ...snapshot.turnState,
       selectedRoles: snapshot.turnState.selectedRoles.map(selectedRole => ({ ...selectedRole })),
-      completedPlayerIds: [...snapshot.turnState.completedPlayerIds]
+      completedPlayerIds: [...snapshot.turnState.completedPlayerIds],
+      pendingTrades: snapshot.turnState.pendingTrades.map(trade => ({
+        playerId: trade.playerId,
+        buildingIds: [...trade.buildingIds]
+      }))
     }
   }
 }
@@ -106,19 +110,7 @@ export function getGameLog(gameId: string, player: PlayerProfile): GameLogEntry[
 export function getGameResult(gameId: string, player: PlayerProfile): GameResult {
   const record = requireGameRecord(gameId)
   assertGameAccess(record.snapshot, player)
-  const snapshot = record.snapshot
-
-  return {
-    gameId,
-    isGameOver: snapshot.phase === 'GAME_END',
-    winner: snapshot.winner,
-    players: snapshot.players.map(gamePlayer => ({
-      playerId: gamePlayer.profile.discordId,
-      username: gamePlayer.profile.username,
-      score: 0,
-      isWinner: snapshot.winner === gamePlayer.profile.discordId
-    }))
-  }
+  return calculateGameResult(record.snapshot)
 }
 
 export function dispatchGameActionForPlayer(gameId: string, player: PlayerProfile, action: GameAction): GameSnapshot {

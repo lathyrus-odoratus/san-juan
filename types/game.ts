@@ -37,6 +37,19 @@ export interface SelectedRole {
   playerId: string
 }
 
+export interface PriceCard {
+  indigo: number
+  sugar: number
+  tobacco: number
+  coffee: number
+  silver: number
+}
+
+export interface PendingTrade {
+  playerId: string
+  buildingIds: string[]
+}
+
 export interface TurnState {
   round: number
   governorPlayerId: string
@@ -45,6 +58,8 @@ export interface TurnState {
   selectedRole: Role | null
   selectedRoles: SelectedRole[]
   completedPlayerIds: string[]
+  priceCard: PriceCard | null
+  pendingTrades: PendingTrade[]
 }
 
 /**

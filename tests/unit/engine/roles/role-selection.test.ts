@@ -17,9 +17,26 @@ function createEngineWithGame(): ReturnType<typeof useGameEngine> {
   return engine
 }
 
-function selectAndSkip(engine: ReturnType<typeof useGameEngine>, playerId: string, role: Role): void {
+function selectAndCompleteRole(engine: ReturnType<typeof useGameEngine>, playerId: string, role: Role): void {
   engine.dispatch({ type: 'SELECT_ROLE', playerId, role })
   engine.dispatch({ type: 'SKIP_ACTION', playerId })
+
+  if (role === 'Prospector') {
+    return
+  }
+
+  for (const actionPlayerId of getClockwisePlayersAfter(playerId)) {
+    engine.dispatch({ type: 'SKIP_ACTION', playerId: actionPlayerId })
+  }
+}
+
+function getClockwisePlayersAfter(playerId: string): string[] {
+  const playerIds = ['host', 'p1', 'p2', 'p3']
+  const playerIndex = playerIds.indexOf(playerId)
+  return [
+    ...playerIds.slice(playerIndex + 1),
+    ...playerIds.slice(0, playerIndex)
+  ]
 }
 
 describe('role selection flow', () => {
@@ -36,7 +53,7 @@ describe('role selection flow', () => {
   it('returns to role selection with the next clockwise player after action resolution', () => {
     const engine = createEngineWithGame()
 
-    selectAndSkip(engine, 'host', 'Builder')
+    selectAndCompleteRole(engine, 'host', 'Builder')
     const snapshot = engine.dispatch({ type: 'SELECT_ROLE', playerId: 'p1', role: 'Producer' })
 
     expect(snapshot.phase).toBe('ROUND_ACTION_RESOLUTION')
@@ -57,30 +74,27 @@ describe('role selection flow', () => {
 
   it('rejects selecting an already selected role', () => {
     const engine = createEngineWithGame()
-    selectAndSkip(engine, 'host', 'Builder')
+    selectAndCompleteRole(engine, 'host', 'Builder')
 
     expect(() => engine.dispatch({ type: 'SELECT_ROLE', playerId: 'p1', role: 'Builder' })).toThrow('ILLEGAL_ACTION')
   })
 
-  it('moves to round end check after all players have selected roles', () => {
+  it('starts the next round after all players have selected roles and no hand limit cleanup is needed', () => {
     const engine = createEngineWithGame()
 
-    selectAndSkip(engine, 'host', 'Builder')
-    selectAndSkip(engine, 'p1', 'Producer')
-    selectAndSkip(engine, 'p2', 'Trader')
+    selectAndCompleteRole(engine, 'host', 'Builder')
+    selectAndCompleteRole(engine, 'p1', 'Producer')
+    selectAndCompleteRole(engine, 'p2', 'Trader')
     const selected = engine.dispatch({ type: 'SELECT_ROLE', playerId: 'p3', role: 'Prospector' })
     expect(selected.phase).toBe('ROUND_ACTION_RESOLUTION')
 
     const snapshot = engine.dispatch({ type: 'SKIP_ACTION', playerId: 'p3' })
 
-    expect(snapshot.phase).toBe('ROUND_END_CHECK')
-    expect(snapshot.turnState.activePlayerId).toBe('host')
-    expect(snapshot.turnState.selectedRoles).toEqual([
-      { playerId: 'host', role: 'Builder' },
-      { playerId: 'p1', role: 'Producer' },
-      { playerId: 'p2', role: 'Trader' },
-      { playerId: 'p3', role: 'Prospector' }
-    ])
+    expect(snapshot.phase).toBe('ROUND_ROLE_SELECTION')
+    expect(snapshot.turnState.round).toBe(2)
+    expect(snapshot.turnState.governorPlayerId).toBe('p1')
+    expect(snapshot.turnState.activePlayerId).toBe('p1')
+    expect(snapshot.turnState.selectedRoles).toEqual([])
   })
 
   it('rejects skipping an action outside role action resolution', () => {
