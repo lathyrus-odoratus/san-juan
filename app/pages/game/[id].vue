@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import buildingsData from '~~/data/cards.buildings.json'
-import type { GameSnapshot, PlayerState } from '~~/types/game'
+import RoleSelectionModal from '~~/app/components/game/RoleSelectionModal.vue'
+import type { GameSnapshot, PlayerState, Role } from '~~/types/game'
 import type { PlayerProfile } from '~~/types/player'
 
 // Game table page — board layout, hand, roles, onboarding.
@@ -23,6 +24,8 @@ interface BuildingsFile {
 const gameId = computed(() => route.params.id as string)
 const isLeaveConfirmOpen = ref(false)
 const isSettingsOpen = ref(false)
+const isRoleSelectionOpen = ref(true)
+const selectedRoleMessage = ref('')
 const playerInfoMode = ref<'hover' | 'always'>('hover')
 const buildingTextMode = ref<'compact' | 'detailed'>('detailed')
 const startedAt = Date.now()
@@ -43,8 +46,12 @@ const activePlayerName = computed(() => {
 const guideEntries = computed(() => [
   `第 ${snapshot.value.turnState.round} 回合開始`,
   `${activePlayerName.value} 選擇職業`,
+  selectedRoleMessage.value,
   '桌面已載入，等待玩家操作'
-])
+].filter(Boolean))
+const playerNamesById = computed(() => Object.fromEntries(
+  players.value.map(player => [player.profile.discordId, player.profile.username])
+))
 
 function requestLeaveGame(): void {
   isLeaveConfirmOpen.value = true
@@ -69,6 +76,15 @@ function setPlayerInfoMode(mode: 'hover' | 'always'): void {
 
 function setBuildingTextMode(mode: 'compact' | 'detailed'): void {
   buildingTextMode.value = mode
+}
+
+function hideRoleSelection(): void {
+  isRoleSelectionOpen.value = false
+}
+
+function confirmRoleSelection(role: Role): void {
+  selectedRoleMessage.value = `You 選擇了 ${role}`
+  isRoleSelectionOpen.value = false
 }
 
 function isGovernor(player: PlayerState | null): boolean {
@@ -142,7 +158,7 @@ function createDemoSnapshot(id: string): GameSnapshot {
       activePlayerId: profiles[0]?.discordId ?? '',
       actionPlayerId: null,
       selectedRole: null,
-      selectedRoles: [],
+      selectedRoles: [{ role: 'Builder', playerId: 'player-left' }],
       completedPlayerIds: []
     },
     phase: 'ROUND_ROLE_SELECTION',
@@ -402,6 +418,19 @@ function createDemoSnapshot(id: string): GameSnapshot {
         再次開啟導覽
       </button>
     </aside>
+
+    <div
+      v-if="isRoleSelectionOpen"
+      class="modal-layer"
+      role="presentation"
+    >
+      <RoleSelectionModal
+        :selected-roles="snapshot.turnState.selectedRoles"
+        :player-names-by-id="playerNamesById"
+        @hide="hideRoleSelection"
+        @confirm="confirmRoleSelection"
+      />
+    </div>
 
     <div
       v-if="isLeaveConfirmOpen"
@@ -777,9 +806,20 @@ function createDemoSnapshot(id: string): GameSnapshot {
   width: 100%;
 }
 
+.modal-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgb(23 32 27 / 52%);
+}
+
 .game-table-page__dialog-backdrop {
   position: fixed;
   inset: 0;
+  z-index: 40;
   display: grid;
   place-items: center;
   padding: 24px;

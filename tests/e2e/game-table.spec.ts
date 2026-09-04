@@ -9,4 +9,6 @@ test('game table shell renders primary zones', async ({ page }) => {
   await expect(page.getByLabel('遊戲指引')).toContainText('桌面已載入')
   await expect(page.getByLabel('自己的手牌')).toContainText('Smithy')
   await expect(page.getByText(/^v\d+\.\d+\.\d+$/)).toBeVisible()
+  await expect(page.getByRole('dialog', { name: '選擇你的職業' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Builder/ })).toBeDisabled()
 })

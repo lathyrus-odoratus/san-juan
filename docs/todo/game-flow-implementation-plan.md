@@ -108,34 +108,34 @@
 
 ### 目標
 
-- [ ] 完成職業操作需要的共用 UI 元件與前端互動殼。
+- [x] 完成職業操作需要的共用 UI 元件與前端互動殼。
 
 ### 實作項目
 
-- [ ] 實作通用 `CardSelectorModal`。
-- [ ] 實作通用結果確認彈窗。
-- [ ] 實作職業選擇 Modal。
-- [ ] 實作 `Producer` 工廠選擇 Modal。
-- [ ] 實作 `Builder` 兩步驟 Modal。
-- [ ] 實作 `Trader` 售貨 Modal。
-- [ ] 實作 `Councillor` 選牌 Modal。
-- [ ] 實作手牌超上限棄牌 Modal。
-- [ ] Modal 支援 `隱藏` 後保留目前選取狀態。
-- [ ] disabled card 維持可見但不可選。
+- [x] 實作通用 `CardSelectorModal`。
+- [x] 實作通用結果確認彈窗。
+- [x] 實作職業選擇 Modal。
+- [x] 實作 `Producer` 工廠選擇 Modal。
+- [x] 實作 `Builder` 兩步驟 Modal。
+- [x] 實作 `Trader` 售貨 Modal。
+- [x] 實作 `Councillor` 選牌 Modal。
+- [x] 實作手牌超上限棄牌 Modal。
+- [x] Modal 支援 `隱藏` 後保留目前選取狀態。
+- [x] disabled card 維持可見但不可選。
 
 ### 測試項目
 
-- [ ] 測試 card pagination。
-- [ ] 測試 selected 狀態。
-- [ ] 測試 disabled 狀態。
-- [ ] 測試 `Producer` 一般玩家最多選 1 個工廠。
-- [ ] 測試 `Producer` 特權玩家最多選 2 個工廠。
-- [ ] 測試 `Builder` 不可建重複城市建築。
-- [ ] 測試 `Builder` 手牌不足時 card disabled。
-- [ ] 測試 `Councillor` 限選 1 張。
-- [ ] 測試 discard hand limit 選滿才可確認。
-- [ ] E2E 測試職業選擇 Modal 顯示已選玩家 avatar。
-- [ ] E2E 測試已選職業 disabled。
+- [x] 測試 card pagination。
+- [x] 測試 selected 狀態。
+- [x] 測試 disabled 狀態。
+- [x] 測試 `Producer` 一般玩家最多選 1 個工廠。
+- [x] 測試 `Producer` 特權玩家最多選 2 個工廠。
+- [x] 測試 `Builder` 不可建重複城市建築。
+- [x] 測試 `Builder` 手牌不足時 card disabled。
+- [x] 測試 `Councillor` 限選 1 張。
+- [x] 測試 discard hand limit 選滿才可確認。
+- [x] E2E 測試職業選擇 Modal 顯示已選玩家 avatar。
+- [x] E2E 測試已選職業 disabled。
 
 ## 分支 5：`feat/game-role-actions-engine`
 
