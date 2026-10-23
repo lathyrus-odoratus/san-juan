@@ -12,6 +12,8 @@ test('keeps UI settings across a page refresh without storing the game locally',
   })
 
   await page.reload()
+  // The notice only appears after hydration; clicking earlier hits server-rendered markup with no handler.
+  await expect(page.getByLabel('牌局載入失敗')).toBeVisible()
   await page.getByLabel('開啟操作面板').click()
 
   const drawer = page.getByLabel('操作與設定')
