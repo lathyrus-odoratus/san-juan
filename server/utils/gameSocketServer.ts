@@ -1,6 +1,6 @@
 import type { Server } from 'socket.io'
 import type { ChatMessage, ClientToServerEvents, ServerError, ServerToClientEvents } from '~~/types/events'
-import type { GameSnapshot, Role } from '~~/types/game'
+import type { GameAction, GameSnapshot, Role } from '~~/types/game'
 import type { PlayerProfile } from '~~/types/player'
 import { getAuthSessionFromRequest } from '~~/server/utils/authSession'
 import { getRoom } from '~~/server/utils/roomStore'
@@ -29,6 +29,15 @@ export type SelectRoleResult =
 export type SkipActionResult =
   | { type: 'action_skipped'; gameId: string; playerId: string; snapshot: GameSnapshot }
   | { type: 'error'; error: ServerError }
+
+export type GameActionResult =
+  | { type: 'action_performed'; gameId: string; playerId: string; snapshot: GameSnapshot }
+  | { type: 'error'; error: ServerError }
+
+/**
+ * Builds the action for the authenticated sender; the player id never comes from the client.
+ */
+export type GameActionFactory = (playerId: string) => GameAction
 
 export function resolveJoinRoom(roomId: string): JoinRoomResult {
   try {
@@ -108,33 +117,27 @@ export function resolveSendMessage(
   }
 }
 
-export function resolveSelectRole(
+export function resolveGameAction(
   sender: PlayerProfile | null,
   gameId: string,
-  role: Role
-): SelectRoleResult {
+  createAction: GameActionFactory
+): GameActionResult {
   if (!sender) {
     return {
       type: 'error',
       error: {
         code: 'AUTH_ERROR',
-        message: 'Discord login is required to select a role.'
+        message: 'Discord login is required to play.'
       }
     }
   }
 
   try {
-    const snapshot = dispatchGameActionForPlayer(gameId, sender, {
-      type: 'SELECT_ROLE',
-      playerId: sender.discordId,
-      role
-    })
-
+    const snapshot = dispatchGameActionForPlayer(gameId, sender, createAction(sender.discordId))
     return {
-      type: 'role_selected',
+      type: 'action_performed',
       gameId,
       playerId: sender.discordId,
-      role,
       snapshot
     }
   }
@@ -146,38 +149,48 @@ export function resolveSelectRole(
   }
 }
 
+export function resolveSelectRole(
+  sender: PlayerProfile | null,
+  gameId: string,
+  role: Role
+): SelectRoleResult {
+  const result = resolveGameAction(sender, gameId, playerId => ({ type: 'SELECT_ROLE', playerId, role }))
+  if (result.type === 'error') {
+    return result
+  }
+
+  let snapshot = result.snapshot
+  // The Prospector has no choice to make, so the privilege draw happens right away.
+  if (role === 'Prospector' && snapshot.turnState.actionPlayerId === result.playerId) {
+    const prospected = resolveGameAction(sender, gameId, playerId => ({ type: 'PROSPECT', playerId }))
+    if (prospected.type === 'action_performed') {
+      snapshot = prospected.snapshot
+    }
+  }
+
+  return {
+    type: 'role_selected',
+    gameId,
+    playerId: result.playerId,
+    role,
+    snapshot
+  }
+}
+
 export function resolveSkipAction(
   sender: PlayerProfile | null,
   gameId: string
 ): SkipActionResult {
-  if (!sender) {
-    return {
-      type: 'error',
-      error: {
-        code: 'AUTH_ERROR',
-        message: 'Discord login is required to skip an action.'
-      }
-    }
+  const result = resolveGameAction(sender, gameId, playerId => ({ type: 'SKIP_ACTION', playerId }))
+  if (result.type === 'error') {
+    return result
   }
 
-  try {
-    const snapshot = dispatchGameActionForPlayer(gameId, sender, {
-      type: 'SKIP_ACTION',
-      playerId: sender.discordId
-    })
-
-    return {
-      type: 'action_skipped',
-      gameId,
-      playerId: sender.discordId,
-      snapshot
-    }
-  }
-  catch (error) {
-    return {
-      type: 'error',
-      error: resolveGameActionError(error)
-    }
+  return {
+    type: 'action_skipped',
+    gameId,
+    playerId: result.playerId,
+    snapshot: result.snapshot
   }
 }
 
@@ -286,15 +299,7 @@ export function setupGameSocketServer(io: GameIoServer): GameSocketServer {
         playerId: result.playerId,
         role: result.role
       })
-      gameNamespace.to(result.snapshot.roomId).emit('server:game_state_updated', result.snapshot)
-
-      if (result.snapshot.turnState.actionPlayerId && result.snapshot.turnState.selectedRole) {
-        gameNamespace.to(result.snapshot.roomId).emit('server:action_prompt', {
-          gameId: result.gameId,
-          playerId: result.snapshot.turnState.actionPlayerId,
-          role: result.snapshot.turnState.selectedRole
-        })
-      }
+      broadcastGameState(result.gameId, result.snapshot)
     })
 
     socket.on('client:skip_action', async (payload) => {
@@ -305,16 +310,65 @@ export function setupGameSocketServer(io: GameIoServer): GameSocketServer {
       }
 
       socket.join(result.snapshot.roomId)
-      gameNamespace.to(result.snapshot.roomId).emit('server:game_state_updated', result.snapshot)
-
-      if (result.snapshot.phase === 'ROUND_ROLE_SELECTION') {
-        gameNamespace.to(result.snapshot.roomId).emit('server:role_selection_start', {
-          gameId: result.gameId,
-          playerId: result.snapshot.turnState.activePlayerId
-        })
-      }
+      broadcastGameState(result.gameId, result.snapshot)
     })
+
+    async function performGameAction(gameId: string, createAction: GameActionFactory): Promise<void> {
+      const result = resolveGameAction(await senderPromise, gameId, createAction)
+      if (result.type === 'error') {
+        socket.emit('server:error', result.error)
+        return
+      }
+
+      socket.join(result.snapshot.roomId)
+      broadcastGameState(result.gameId, result.snapshot)
+    }
+
+    socket.on('client:prospect', payload => performGameAction(payload.gameId, playerId => ({ type: 'PROSPECT', playerId })))
+    socket.on('client:build', payload => performGameAction(payload.gameId, playerId => ({
+      type: 'BUILD',
+      playerId,
+      cardId: payload.cardId,
+      payment: payload.payment
+    })))
+    socket.on('client:produce', payload => performGameAction(payload.gameId, playerId => ({
+      type: 'PRODUCE',
+      playerId,
+      buildingIds: payload.buildingIds
+    })))
+    socket.on('client:trade', payload => performGameAction(payload.gameId, playerId => ({
+      type: 'TRADE',
+      playerId,
+      buildingIds: payload.buildingIds
+    })))
+    socket.on('client:councillor_select', payload => performGameAction(payload.gameId, playerId => ({
+      type: 'COUNCIL',
+      playerId,
+      keptCardIds: payload.keptCardIds,
+      discardedCardIds: payload.discardedCardIds
+    })))
+    socket.on('client:discard', payload => performGameAction(payload.gameId, playerId => ({
+      type: 'DISCARD',
+      playerId,
+      cardIds: payload.cardIds
+    })))
   })
+
+  function broadcastGameState(gameId: string, snapshot: GameSnapshot): void {
+    const room = gameNamespace.to(snapshot.roomId)
+    room.emit('server:game_state_updated', snapshot)
+
+    if (snapshot.phase === 'ROUND_ROLE_SELECTION') {
+      room.emit('server:role_selection_start', { gameId, playerId: snapshot.turnState.activePlayerId })
+    }
+    else if (snapshot.phase === 'ROUND_ACTION_RESOLUTION' && snapshot.turnState.actionPlayerId && snapshot.turnState.selectedRole) {
+      room.emit('server:action_prompt', {
+        gameId,
+        playerId: snapshot.turnState.actionPlayerId,
+        role: snapshot.turnState.selectedRole
+      })
+    }
+  }
 
   return {
     close: () => {

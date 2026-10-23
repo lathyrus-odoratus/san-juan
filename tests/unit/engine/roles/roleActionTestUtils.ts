@@ -36,7 +36,11 @@ export function createActionState(role: Role): GameSnapshot {
       selectedRole: role,
       selectedRoles: [{ role, playerId: 'host' }],
       activePlayerId: 'host',
-      actionPlayerId: 'host'
+      actionPlayerId: 'host',
+      // SELECT_ROLE would reveal a price card; fix one so settlement is predictable.
+      priceCard: role === 'Trader'
+        ? { indigo: 1, sugar: 2, tobacco: 2, coffee: 3, silver: 3 }
+        : snapshot.turnState.priceCard
     }
   }
 }
