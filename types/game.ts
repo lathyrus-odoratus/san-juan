@@ -24,6 +24,8 @@ export type Role =
 
 /**
  * Per-player in-game state. Card references are stored by id.
+ * `goods` is keyed by building slot: the card id for the first copy,
+ * `<cardId>#2`, `#3`, … for further copies of the same production building.
  */
 export interface PlayerState {
   profile: PlayerProfile
@@ -73,6 +75,8 @@ export interface GameSnapshot {
   players: PlayerState[]
   deckState: string[]
   discardState: string[]
+  /** Unrevealed price cards; the Trader reveals the top one and returns it to the bottom. */
+  priceDeck: PriceCard[]
   turnState: TurnState
   phase: GamePhase
   winner: string | null

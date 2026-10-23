@@ -32,6 +32,7 @@ interface BuildingCard {
   id: string
   category: 'production' | 'city'
   cost: number
+  vp: number
   count: number
   goodType?: keyof PriceCard
 }
@@ -51,19 +52,47 @@ interface RulesConfig {
 const buildings = buildingsData as BuildingsFile
 const rules = rulesConfig as RulesConfig
 const STARTING_BUILDING_ID = 'indigo_plant'
-const DEFAULT_PRICE_CARD: PriceCard = {
-  indigo: 1,
-  sugar: 2,
-  tobacco: 2,
-  coffee: 3,
-  silver: 3
-}
+// Trading house tiles from the base game; one is revealed per Trader phase.
+const PRICE_CARDS: PriceCard[] = [
+  { indigo: 1, sugar: 1, tobacco: 1, coffee: 2, silver: 2 },
+  { indigo: 1, sugar: 1, tobacco: 2, coffee: 2, silver: 2 },
+  { indigo: 1, sugar: 1, tobacco: 2, coffee: 2, silver: 3 },
+  { indigo: 1, sugar: 2, tobacco: 2, coffee: 2, silver: 3 },
+  { indigo: 1, sugar: 2, tobacco: 2, coffee: 3, silver: 3 }
+]
+const DEFAULT_PRICE_CARD: PriceCard = PRICE_CARDS[0] as PriceCard
+// Discard is shuffled back under the deck before it runs this low, so the
+// councillor's visible top cards never change after the action is chosen.
+const DECK_REFILL_THRESHOLD = 12
 
 export function dispatchGameAction(state: GameSnapshot, action: GameAction): GameSnapshot {
   if (!canDispatchGameAction(state, action)) {
     throw new Error('ILLEGAL_ACTION')
   }
 
+  const nextState = applyGameAction(state, action)
+  refillDeck(nextState)
+  return nextState
+}
+
+/**
+ * Keys for each building's goods slot. The first copy of a card uses its id,
+ * later copies of the same production building get `#2`, `#3`, …
+ */
+export function getBuildingSlotKeys(buildings: string[]): string[] {
+  const seen = new Map<string, number>()
+  return buildings.map((cardId) => {
+    const copy = (seen.get(cardId) ?? 0) + 1
+    seen.set(cardId, copy)
+    return copy === 1 ? cardId : `${cardId}#${copy}`
+  })
+}
+
+export function getSlotCardId(slotKey: string): string {
+  return slotKey.split('#')[0] ?? slotKey
+}
+
+function applyGameAction(state: GameSnapshot, action: GameAction): GameSnapshot {
   if (action.type === 'SELECT_ROLE') {
     return selectRole(state, action)
   }
@@ -217,12 +246,15 @@ function createInitialGame(seed: string, players: PlayerProfile[]): GameSnapshot
 
   const gamePlayers = players.map<PlayerState>(player => ({
     profile: { ...player },
-    hand: drawCards(deck, rules.initialHandSize),
+    hand: takeCards(deck, rules.initialHandSize),
     buildings: [STARTING_BUILDING_ID],
     goods: {
       [STARTING_BUILDING_ID]: null
     }
   }))
+
+  const priceDeck = [...PRICE_CARDS]
+  shuffle(priceDeck, `${seed}:price`)
 
   return {
     schemaVersion: 1,
@@ -232,6 +264,7 @@ function createInitialGame(seed: string, players: PlayerProfile[]): GameSnapshot
     players: gamePlayers,
     deckState: deck,
     discardState: [],
+    priceDeck,
     turnState: {
       round: 1,
       governorPlayerId: gamePlayers[0]?.profile.discordId ?? '',
@@ -264,6 +297,11 @@ function selectRole(state: GameSnapshot, action: Extract<GameAction, { type: 'SE
   nextState.turnState.activePlayerId = action.playerId
   nextState.turnState.completedPlayerIds = []
   nextState.turnState.pendingTrades = []
+  if (action.role === 'Trader') {
+    const [priceCard, ...restPriceDeck] = nextState.priceDeck ?? []
+    nextState.turnState.priceCard = priceCard ?? DEFAULT_PRICE_CARD
+    nextState.priceDeck = restPriceDeck
+  }
   nextState.updatedAt = state.updatedAt + 1
   return nextState
 }
@@ -282,13 +320,24 @@ function completeRoleAction(state: GameSnapshot, playerId: string): GameSnapshot
     return nextState
   }
 
-  if (nextState.turnState.selectedRole === 'Trader') {
+  const finishedRole = nextState.turnState.selectedRole
+  if (finishedRole === 'Trader') {
     resolvePendingTrades(nextState)
+    // The revealed price card goes back under the price deck.
+    if (nextState.turnState.priceCard) {
+      nextState.priceDeck = [...(nextState.priceDeck ?? []), nextState.turnState.priceCard]
+    }
+    nextState.turnState.priceCard = null
   }
 
   nextState.turnState.selectedRole = null
   nextState.turnState.actionPlayerId = null
   nextState.turnState.pendingTrades = []
+
+  // The game ends right after the builder phase in which someone reaches 12 buildings.
+  if (finishedRole === 'Builder' && hasReachedEndgame(nextState)) {
+    return endGame(nextState, state.updatedAt + 1)
+  }
 
   if (nextState.turnState.selectedRoles.length >= nextState.players.length) {
     return resolveRoundEnd(nextState, state.updatedAt + 1)
@@ -305,7 +354,7 @@ function completeRoleAction(state: GameSnapshot, playerId: string): GameSnapshot
 function prospect(state: GameSnapshot, playerId: string): GameSnapshot {
   const nextState = cloneSnapshot(state)
   const player = requirePlayer(nextState, playerId)
-  player.hand.push(...drawCards(nextState.deckState, 1))
+  player.hand.push(...drawCards(nextState, 1))
   return completeRoleAction(nextState, playerId)
 }
 
@@ -313,7 +362,7 @@ function produce(state: GameSnapshot, action: Extract<GameAction, { type: 'PRODU
   const nextState = cloneSnapshot(state)
   const player = requirePlayer(nextState, action.playerId)
   for (const buildingId of action.buildingIds) {
-    const [good] = drawCards(nextState.deckState, 1)
+    const [good] = drawCards(nextState, 1)
     player.goods[buildingId] = good ?? null
   }
 
@@ -327,8 +376,9 @@ function build(state: GameSnapshot, action: Extract<GameAction, { type: 'BUILD' 
   player.buildings.push(action.cardId)
 
   const card = getBuildingCard(action.cardId)
-  if (card?.category === 'production') {
-    player.goods[action.cardId] = null
+  const slotKey = getBuildingSlotKeys(player.buildings).at(-1)
+  if (card?.category === 'production' && slotKey) {
+    player.goods[slotKey] = null
   }
 
   nextState.discardState.push(...action.payment)
@@ -337,9 +387,6 @@ function build(state: GameSnapshot, action: Extract<GameAction, { type: 'BUILD' 
 
 function trade(state: GameSnapshot, action: Extract<GameAction, { type: 'TRADE' }>): GameSnapshot {
   const nextState = cloneSnapshot(state)
-  const priceCard = nextState.turnState.priceCard ?? DEFAULT_PRICE_CARD
-  nextState.turnState.priceCard = priceCard
-
   nextState.turnState.pendingTrades = [
     ...nextState.turnState.pendingTrades.filter(trade => trade.playerId !== action.playerId),
     {
@@ -354,7 +401,7 @@ function council(state: GameSnapshot, action: Extract<GameAction, { type: 'COUNC
   const nextState = cloneSnapshot(state)
   const player = requirePlayer(nextState, action.playerId)
   const drawCount = getRoleLimit(state, action.playerId, 2, 5)
-  const drawnCards = drawCards(nextState.deckState, drawCount)
+  const drawnCards = drawCards(nextState, drawCount)
   const keptCardId = action.keptCardIds[0]
   if (keptCardId) {
     player.hand.push(keptCardId)
@@ -388,18 +435,8 @@ function resolveRoundEnd(state: GameSnapshot, updatedAt: number): GameSnapshot {
     return nextState
   }
 
-  if (nextState.players.some(player => player.buildings.length >= rules.endgameBuildingCount)) {
-    nextState.phase = 'GAME_END'
-    nextState.turnState.activePlayerId = ''
-    nextState.turnState.actionPlayerId = null
-    nextState.turnState.selectedRole = null
-    nextState.turnState.selectedRoles = []
-    nextState.turnState.completedPlayerIds = []
-    nextState.turnState.priceCard = null
-    nextState.turnState.pendingTrades = []
-    nextState.winner = calculateGameResult({ ...nextState, phase: 'GAME_END' }).winner
-    nextState.updatedAt = updatedAt
-    return nextState
+  if (hasReachedEndgame(nextState)) {
+    return endGame(nextState, updatedAt)
   }
 
   const nextGovernorPlayerId = getNextPlayerId(nextState, nextState.turnState.governorPlayerId)
@@ -413,6 +450,25 @@ function resolveRoundEnd(state: GameSnapshot, updatedAt: number): GameSnapshot {
   nextState.turnState.completedPlayerIds = []
   nextState.turnState.priceCard = null
   nextState.turnState.pendingTrades = []
+  nextState.updatedAt = updatedAt
+  return nextState
+}
+
+function hasReachedEndgame(state: GameSnapshot): boolean {
+  return state.players.some(player => player.buildings.length >= rules.endgameBuildingCount)
+}
+
+function endGame(state: GameSnapshot, updatedAt: number): GameSnapshot {
+  const nextState = cloneSnapshot(state)
+  nextState.phase = 'GAME_END'
+  nextState.turnState.activePlayerId = ''
+  nextState.turnState.actionPlayerId = null
+  nextState.turnState.selectedRole = null
+  nextState.turnState.selectedRoles = []
+  nextState.turnState.completedPlayerIds = []
+  nextState.turnState.priceCard = null
+  nextState.turnState.pendingTrades = []
+  nextState.winner = calculateGameResult({ ...nextState, phase: 'GAME_END' }).winner
   nextState.updatedAt = updatedAt
   return nextState
 }
@@ -448,7 +504,7 @@ function resolvePendingTrades(state: GameSnapshot): void {
 
     for (const buildingId of pendingTrade.buildingIds) {
       const goodCardId = player.goods[buildingId]
-      const building = getBuildingCard(buildingId)
+      const building = getBuildingCard(getSlotCardId(buildingId))
       if (!goodCardId || !building?.goodType) {
         throw new Error('ILLEGAL_ACTION')
       }
@@ -458,7 +514,7 @@ function resolvePendingTrades(state: GameSnapshot): void {
       totalCardsToDraw += priceCard[building.goodType] ?? 0
     }
 
-    player.hand.push(...drawCards(state.deckState, totalCardsToDraw))
+    player.hand.push(...drawCards(state, totalCardsToDraw))
   }
 }
 
@@ -468,20 +524,22 @@ function getRoleLimit(state: GameSnapshot, playerId: string, normalLimit: number
   return selectedRoleOwner === playerId ? privilegedLimit : normalLimit
 }
 
-function canProduceAtBuilding(state: GameSnapshot, playerId: string, buildingId: string): boolean {
+function canProduceAtBuilding(state: GameSnapshot, playerId: string, slotKey: string): boolean {
   const player = findPlayer(state, playerId)
-  const building = getBuildingCard(buildingId)
-  return Boolean(player?.buildings.includes(buildingId)
+  const building = getBuildingCard(getSlotCardId(slotKey))
+  return Boolean(player
+    && getBuildingSlotKeys(player.buildings).includes(slotKey)
     && building?.category === 'production'
-    && player.goods[buildingId] === null)
+    && !player.goods[slotKey])
 }
 
-function canTradeFromBuilding(state: GameSnapshot, playerId: string, buildingId: string): boolean {
+function canTradeFromBuilding(state: GameSnapshot, playerId: string, slotKey: string): boolean {
   const player = findPlayer(state, playerId)
-  const building = getBuildingCard(buildingId)
-  return Boolean(player?.buildings.includes(buildingId)
+  const building = getBuildingCard(getSlotCardId(slotKey))
+  return Boolean(player
+    && getBuildingSlotKeys(player.buildings).includes(slotKey)
     && building?.category === 'production'
-    && player.goods[buildingId])
+    && player.goods[slotKey])
 }
 
 function canBuild(state: GameSnapshot, action: Extract<GameAction, { type: 'BUILD' }>): boolean {
@@ -648,7 +706,7 @@ function removeStartingBuildings(deck: string[], count: number): void {
   }
 }
 
-function drawCards(deck: string[], count: number): string[] {
+function takeCards(deck: string[], count: number): string[] {
   const cards = deck.splice(0, count)
   if (cards.length !== count) {
     throw new Error('DECK_EXHAUSTED')
@@ -657,7 +715,30 @@ function drawCards(deck: string[], count: number): string[] {
   return cards
 }
 
-function shuffle(cards: string[], seed: string): void {
+/**
+ * Draws from the deck, shuffling the discard pile back in when the deck runs short.
+ * Only when both piles are empty does a player receive fewer cards than asked.
+ */
+function drawCards(state: GameSnapshot, count: number): string[] {
+  if (state.deckState.length < count) {
+    refillDeck(state, count)
+  }
+
+  return state.deckState.splice(0, count)
+}
+
+function refillDeck(state: GameSnapshot, minimum = DECK_REFILL_THRESHOLD): void {
+  if (state.deckState.length >= minimum || state.discardState.length === 0) {
+    return
+  }
+
+  const reshuffled = [...state.discardState]
+  shuffle(reshuffled, `${state.gameId}:reshuffle:${state.turnState.round}:${state.deckState.length}:${reshuffled.length}`)
+  state.deckState.push(...reshuffled)
+  state.discardState = []
+}
+
+function shuffle<T>(cards: T[], seed: string): void {
   const random = createSeededRandom(seed)
   for (let index = cards.length - 1; index > 0; index -= 1) {
     const swapIndex = Math.floor(random() * (index + 1))
@@ -705,6 +786,7 @@ function cloneSnapshot(snapshot: GameSnapshot): GameSnapshot {
     })),
     deckState: [...snapshot.deckState],
     discardState: [...snapshot.discardState],
+    priceDeck: (snapshot.priceDeck ?? []).map(priceCard => ({ ...priceCard })),
     turnState: {
       ...snapshot.turnState,
       selectedRoles: snapshot.turnState.selectedRoles.map(selectedRole => ({ ...selectedRole })),

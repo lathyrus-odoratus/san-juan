@@ -90,7 +90,7 @@ describe('gameStore', () => {
       expect.objectContaining({
         gameId: snapshot.gameId,
         type: 'GAME_CREATED',
-        message: 'Game state initialized from room players.'
+        message: '遊戲開始，總督：player-host'
       })
     ])
   })
@@ -152,7 +152,7 @@ describe('gameStore', () => {
       expect.objectContaining({ type: 'GAME_CREATED' }),
       expect.objectContaining({
         type: 'SELECT_ROLE',
-        message: 'host selected Builder.'
+        message: 'player-host 選擇了建築師'
       })
     ])
   })

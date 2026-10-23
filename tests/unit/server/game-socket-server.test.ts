@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { PlayerProfile } from '~~/types/player'
-import { resolveJoinRoom, resolveSelectRole, resolveSendMessage, resolveSkipAction } from '~~/server/utils/gameSocketServer'
-import { clearGameStoreForTest, createGameForRoom } from '~~/server/utils/gameStore'
+import { resolveGameAction, resolveJoinRoom, resolveSelectRole, resolveSendMessage, resolveSkipAction } from '~~/server/utils/gameSocketServer'
+import { clearGameStoreForTest, createGameForRoom, getGameLog } from '~~/server/utils/gameStore'
 import { clearRoomStoreForTest, createRoomForPlayer, joinRoom, setPlayerReady, startRoom } from '~~/server/utils/roomStore'
 
 function player(discordId: string): PlayerProfile {
@@ -147,6 +147,58 @@ describe('gameSocketServer room events', () => {
           actionPlayerId: 'p1'
         })
       })
+    })
+  })
+
+  it('draws the Prospector card as soon as the role is selected', () => {
+    const snapshot = createGameForRoom(createStartedRoom())
+    const handSize = snapshot.players[0]!.hand.length
+
+    const result = resolveSelectRole(player('host'), snapshot.gameId, 'Prospector')
+
+    expect(result.type).toBe('role_selected')
+    if (result.type === 'role_selected') {
+      expect(result.snapshot.players[0]!.hand).toHaveLength(handSize + 1)
+      expect(result.snapshot.phase).toBe('ROUND_ROLE_SELECTION')
+      expect(result.snapshot.turnState.activePlayerId).toBe('p1')
+    }
+  })
+
+  it('rejects building a card the player does not hold', () => {
+    const snapshot = createGameForRoom(createStartedRoom())
+    resolveSelectRole(player('host'), snapshot.gameId, 'Builder')
+
+    expect(resolveGameAction(player('host'), snapshot.gameId, playerId => ({ type: 'BUILD', playerId, cardId: 'palace', payment: [] }))).toEqual({
+      type: 'error',
+      error: { code: 'ILLEGAL_ACTION', message: 'This game action is not allowed in the current state.' }
+    })
+  })
+
+  it('logs actions with the player name', () => {
+    const snapshot = createGameForRoom(createStartedRoom())
+    resolveSelectRole(player('host'), snapshot.gameId, 'Builder')
+
+    const result = resolveGameAction(player('host'), snapshot.gameId, playerId => ({ type: 'SKIP_ACTION', playerId }))
+
+    expect(result.type).toBe('action_performed')
+    expect(getGameLog(snapshot.gameId, player('host')).at(-1)?.message).toBe('player-host 跳過')
+  })
+
+  it('rejects actions from players who are not logged in', () => {
+    const snapshot = createGameForRoom(createStartedRoom())
+
+    expect(resolveGameAction(null, snapshot.gameId, playerId => ({ type: 'PROSPECT', playerId }))).toEqual({
+      type: 'error',
+      error: { code: 'AUTH_ERROR', message: 'Discord login is required to play.' }
+    })
+  })
+
+  it('rejects actions from players outside the game', () => {
+    const snapshot = createGameForRoom(createStartedRoom())
+
+    expect(resolveGameAction(player('outsider'), snapshot.gameId, playerId => ({ type: 'SKIP_ACTION', playerId }))).toEqual({
+      type: 'error',
+      error: { code: 'GAME_ACCESS_DENIED', message: 'Only players in this game can perform actions.' }
     })
   })
 })

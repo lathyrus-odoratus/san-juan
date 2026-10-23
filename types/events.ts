@@ -41,4 +41,10 @@ export interface ClientToServerEvents {
   'client:select_role': (payload: { gameId: string; role: Role }) => void
   'client:skip_action': (payload: { gameId: string }) => void
   'client:prospect': (payload: { gameId: string }) => void
+  // Builder picks the building and its payment in one step (API list splits these into build + pay_for_build).
+  'client:build': (payload: { gameId: string; cardId: string; payment: string[] }) => void
+  'client:produce': (payload: { gameId: string; buildingIds: string[] }) => void
+  'client:trade': (payload: { gameId: string; buildingIds: string[] }) => void
+  'client:councillor_select': (payload: { gameId: string; keptCardIds: string[]; discardedCardIds: string[] }) => void
+  'client:discard': (payload: { gameId: string; cardIds: string[] }) => void
 }

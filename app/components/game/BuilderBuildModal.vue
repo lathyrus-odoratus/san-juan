@@ -81,7 +81,7 @@ function confirmPayment(cardIds: string[]): void {
 
   emit('confirm', {
     cardId,
-    payment: cardIds.map(selectorId => selectorId.split(':')[0]).filter(Boolean)
+    payment: cardIds.map(selectorId => selectorId.split(':')[0]).filter((cardId): cardId is string => Boolean(cardId))
   })
 }
 </script>

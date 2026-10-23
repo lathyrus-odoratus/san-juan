@@ -22,5 +22,9 @@ export default defineConfig({
     url: 'http://localhost:3000',
     reuseExistingServer: !process.env.CI,
     timeout: 120000,
+    env: {
+      // Session cookies need a 32+ character secret; CI has no real one.
+      NUXT_SESSION_SECRET: process.env.NUXT_SESSION_SECRET ?? 'e2e-only-session-secret-not-for-production',
+    },
   },
 })
