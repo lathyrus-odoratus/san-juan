@@ -9,11 +9,20 @@ permissions:
 #   dev  → 測試站（Staging），供團隊內開發驗證
 # feature branch 完成後先合進 dev，dev 穩定後再合進 main
 
+# 只改文件（docs/、Markdown）時不跑 CI：不影響程式碼，也不需要重新 build image
 on:
   push:
     branches: [main, dev]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE'
   pull_request:
     branches: [main, dev]
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+      - 'LICENSE'
 
 jobs:
   lint-and-test:
